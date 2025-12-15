@@ -46,7 +46,9 @@ Inductive Phoneme : Type :=
   | Svar : Vowel -> Phoneme
   | Vyan : Consonant -> Phoneme
   | Anusvara : Phoneme
-  | Visarga : Phoneme.
+  | Visarga : Phoneme
+  | Jihvamuliya : Phoneme
+  | Upadhmamiya : Phoneme.
 
 Definition Word := list Phoneme.
 
@@ -694,6 +696,82 @@ Definition lengthen (v : Vowel) : Vowel :=
 Definition is_a_class (v : Vowel) : bool :=
   match v with V_a | V_aa => true | _ => false end.
 
+(** ** Exhaustive guṇa specification *)
+
+Inductive guna_result_spec : Vowel -> list Phoneme -> Prop :=
+  | GR_a : guna_result_spec V_a [Svar V_a]
+  | GR_aa : guna_result_spec V_aa [Svar V_a]
+  | GR_i : guna_result_spec V_i [Svar V_e]
+  | GR_ii : guna_result_spec V_ii [Svar V_e]
+  | GR_u : guna_result_spec V_u [Svar V_o]
+  | GR_uu : guna_result_spec V_uu [Svar V_o]
+  | GR_r : guna_result_spec V_r [Svar V_a; Vyan C_r]
+  | GR_rr : guna_result_spec V_rr [Svar V_a; Vyan C_r]
+  | GR_l : guna_result_spec V_l [Svar V_a; Vyan C_l]
+  | GR_e : guna_result_spec V_e [Svar V_e]
+  | GR_o : guna_result_spec V_o [Svar V_o]
+  | GR_ai : guna_result_spec V_ai [Svar V_ai]
+  | GR_au : guna_result_spec V_au [Svar V_au].
+
+Lemma guna_correct : forall v ps,
+  guna v = ps <-> guna_result_spec v ps.
+Proof.
+  intros v ps.
+  split.
+  - intro H. destruct v; simpl in H; subst; constructor.
+  - intro H. destruct H; reflexivity.
+Qed.
+
+(** ** Exhaustive vṛddhi specification *)
+
+Inductive vrddhi_result_spec : Vowel -> list Phoneme -> Prop :=
+  | VR_a : vrddhi_result_spec V_a [Svar V_aa]
+  | VR_aa : vrddhi_result_spec V_aa [Svar V_aa]
+  | VR_i : vrddhi_result_spec V_i [Svar V_ai]
+  | VR_ii : vrddhi_result_spec V_ii [Svar V_ai]
+  | VR_u : vrddhi_result_spec V_u [Svar V_au]
+  | VR_uu : vrddhi_result_spec V_uu [Svar V_au]
+  | VR_r : vrddhi_result_spec V_r [Svar V_aa; Vyan C_r]
+  | VR_rr : vrddhi_result_spec V_rr [Svar V_aa; Vyan C_r]
+  | VR_l : vrddhi_result_spec V_l [Svar V_aa; Vyan C_l]
+  | VR_e : vrddhi_result_spec V_e [Svar V_ai]
+  | VR_o : vrddhi_result_spec V_o [Svar V_au]
+  | VR_ai : vrddhi_result_spec V_ai [Svar V_ai]
+  | VR_au : vrddhi_result_spec V_au [Svar V_au].
+
+Lemma vrddhi_correct : forall v ps,
+  vrddhi v = ps <-> vrddhi_result_spec v ps.
+Proof.
+  intros v ps.
+  split.
+  - intro H. destruct v; simpl in H; subst; constructor.
+  - intro H. destruct H; reflexivity.
+Qed.
+
+(** ** ṛ/ḷ compound result lemmas *)
+
+Lemma guna_r_yields_ar : forall v,
+  (v = V_r \/ v = V_rr) ->
+  guna v = [Svar V_a; Vyan C_r].
+Proof.
+  intros v [H | H]; subst; reflexivity.
+Qed.
+
+Lemma guna_l_yields_al :
+  guna V_l = [Svar V_a; Vyan C_l].
+Proof. reflexivity. Qed.
+
+Lemma vrddhi_r_yields_aar : forall v,
+  (v = V_r \/ v = V_rr) ->
+  vrddhi v = [Svar V_aa; Vyan C_r].
+Proof.
+  intros v [H | H]; subst; reflexivity.
+Qed.
+
+Lemma vrddhi_l_yields_aal :
+  vrddhi V_l = [Svar V_aa; Vyan C_l].
+Proof. reflexivity. Qed.
+
 (** * Part VI: Yaṇ Correspondence *)
 
 Definition yan_of (v : Vowel) : option Consonant :=
@@ -1210,6 +1288,69 @@ Definition apply_ac_sandhi (v1 v2 : Vowel) : list Phoneme :=
   | Some r => apply_rule r v1 v2
   | None => [Svar v1; Svar v2]
   end.
+
+(** ** Rule 6.1.87 compound results for ṛ/ḷ *)
+
+Lemma rule_87_r_result : forall v1,
+  is_a_class v1 = true ->
+  apply_rule R_6_1_87 v1 V_r = [Svar V_a; Vyan C_r].
+Proof.
+  intros v1 H.
+  destruct v1; simpl in H; try discriminate; reflexivity.
+Qed.
+
+Lemma rule_87_rr_result : forall v1,
+  is_a_class v1 = true ->
+  apply_rule R_6_1_87 v1 V_rr = [Svar V_a; Vyan C_r].
+Proof.
+  intros v1 H.
+  destruct v1; simpl in H; try discriminate; reflexivity.
+Qed.
+
+Lemma rule_87_l_result : forall v1,
+  is_a_class v1 = true ->
+  apply_rule R_6_1_87 v1 V_l = [Svar V_a; Vyan C_l].
+Proof.
+  intros v1 H.
+  destruct v1; simpl in H; try discriminate; reflexivity.
+Qed.
+
+(** ṛ/ḷ are not in ec, so 6.1.88 does not apply to them directly. *)
+
+Lemma r_not_ec : is_ec_computed V_r = false.
+Proof. reflexivity. Qed.
+
+Lemma rr_not_ec : is_ec_computed V_rr = false.
+Proof. reflexivity. Qed.
+
+Lemma l_not_ec : is_ec_computed V_l = false.
+Proof. reflexivity. Qed.
+
+(** ** Sandhi results for ṛ/ḷ cases *)
+
+Lemma a_r_sandhi_is_ar :
+  apply_ac_sandhi V_a V_r = [Svar V_a; Vyan C_r].
+Proof. reflexivity. Qed.
+
+Lemma aa_r_sandhi_is_ar :
+  apply_ac_sandhi V_aa V_r = [Svar V_a; Vyan C_r].
+Proof. reflexivity. Qed.
+
+Lemma a_rr_sandhi_is_ar :
+  apply_ac_sandhi V_a V_rr = [Svar V_a; Vyan C_r].
+Proof. reflexivity. Qed.
+
+Lemma a_l_sandhi_is_al :
+  apply_ac_sandhi V_a V_l = [Svar V_a; Vyan C_l].
+Proof. reflexivity. Qed.
+
+Lemma r_a_sandhi_is_ra :
+  apply_ac_sandhi V_r V_a = [Vyan C_r; Svar V_a].
+Proof. reflexivity. Qed.
+
+Lemma l_a_sandhi_is_la :
+  apply_ac_sandhi V_l V_a = [Vyan C_l; Svar V_a].
+Proof. reflexivity. Qed.
 
 (** * Part XII: Key Conflict Cases *)
 
@@ -1962,11 +2103,35 @@ Definition visarga_before_voiced (prev_vowel : Vowel) (c : Consonant)
   else None.
 
 (** ** 8.3.36 visarjanīyasya jihvāmūlīyopadhmānīyau kakhupau *)
-(** Before k/kh → jihvāmūlīya; before p/ph → upadhmānīya.
-    We model these as allophonic visargas (simplified to visarga). *)
+(** Before k/kh → jihvāmūlīya; before p/ph → upadhmānīya. *)
 
-Definition visarga_allophone (c : Consonant) : Phoneme :=
-  Visarga.
+Definition visarga_allophone (following : Consonant) : Phoneme :=
+  match following with
+  | C_k | C_kh => Jihvamuliya
+  | C_p | C_ph => Upadhmamiya
+  | _ => Visarga
+  end.
+
+Inductive visarga_allophone_spec : Consonant -> Phoneme -> Prop :=
+  | VA_k : visarga_allophone_spec C_k Jihvamuliya
+  | VA_kh : visarga_allophone_spec C_kh Jihvamuliya
+  | VA_p : visarga_allophone_spec C_p Upadhmamiya
+  | VA_ph : visarga_allophone_spec C_ph Upadhmamiya
+  | VA_other : forall c,
+      c <> C_k -> c <> C_kh -> c <> C_p -> c <> C_ph ->
+      visarga_allophone_spec c Visarga.
+
+Lemma visarga_allophone_correct : forall c p,
+  visarga_allophone c = p <-> visarga_allophone_spec c p.
+Proof.
+  intros c p.
+  split.
+  - intro H.
+    destruct c; simpl in H; subst; try constructor; discriminate.
+  - intro H.
+    destruct H; try reflexivity.
+    destruct c; try reflexivity; contradiction.
+Qed.
 
 (** Combined visarga sandhi application. *)
 
@@ -2642,6 +2807,95 @@ Proof. reflexivity. Qed.
 
 Example cons_sandhi_tat_gacchati :
   apply_consonant_sandhi C_t C_g = C_d.
+Proof. reflexivity. Qed.
+
+(** * Part XXII-B: ṇatva (8.4.2) *)
+
+(** ** 8.4.2 aṭ-kuppvāṅnumvyavāye 'pi *)
+(** n becomes ṇ when preceded by ṛ, ṝ, r, or ṣ, unless blocked by
+    intervening palatals, dentals, cerebrals, or l. *)
+
+Definition is_natva_trigger (p : Phoneme) : bool :=
+  match p with
+  | Svar V_r | Svar V_rr => true
+  | Vyan C_r | Vyan C_ss => true
+  | _ => false
+  end.
+
+Definition is_natva_blocker (p : Phoneme) : bool :=
+  match p with
+  | Vyan c =>
+      match c with
+      | C_c | C_ch | C_j | C_jh | C_ny => true
+      | C_t | C_th | C_d | C_dh | C_n => true
+      | C_tt | C_tth | C_dd | C_ddh | C_nn => true
+      | C_l => true
+      | _ => false
+      end
+  | _ => false
+  end.
+
+Fixpoint natva_active_aux (ps : list Phoneme) : bool :=
+  match ps with
+  | [] => false
+  | p :: rest =>
+      if is_natva_trigger p then true
+      else if is_natva_blocker p then false
+      else natva_active_aux rest
+  end.
+
+Definition natva_active (preceding : list Phoneme) : bool :=
+  natva_active_aux (rev preceding).
+
+Definition apply_natva (preceding : list Phoneme) (c : Consonant) : Consonant :=
+  match c with
+  | C_n => if natva_active preceding then C_nn else C_n
+  | _ => c
+  end.
+
+Inductive natva_spec : list Phoneme -> Consonant -> Consonant -> Prop :=
+  | Natva_trigger : forall ps,
+      natva_active ps = true ->
+      natva_spec ps C_n C_nn
+  | Natva_blocked : forall ps,
+      natva_active ps = false ->
+      natva_spec ps C_n C_n
+  | Natva_other : forall ps c,
+      c <> C_n ->
+      natva_spec ps c c.
+
+Lemma apply_natva_correct : forall ps c c',
+  apply_natva ps c = c' <-> natva_spec ps c c'.
+Proof.
+  intros ps c c'.
+  split.
+  - intro H.
+    unfold apply_natva in H.
+    destruct c; try (subst; apply Natva_other; discriminate).
+    destruct (natva_active ps) eqn:E; subst.
+    + apply Natva_trigger. exact E.
+    + apply Natva_blocked. exact E.
+  - intro H.
+    destruct H.
+    + unfold apply_natva. rewrite H. reflexivity.
+    + unfold apply_natva. rewrite H. reflexivity.
+    + unfold apply_natva. destruct c; try reflexivity; contradiction.
+Qed.
+
+Example natva_ex1 :
+  apply_natva [Svar V_r; Svar V_a] C_n = C_nn.
+Proof. reflexivity. Qed.
+
+Example natva_ex2 :
+  apply_natva [Svar V_a; Svar V_i] C_n = C_n.
+Proof. reflexivity. Qed.
+
+Example natva_ex3 :
+  apply_natva [Svar V_r; Vyan C_t; Svar V_a] C_n = C_n.
+Proof. reflexivity. Qed.
+
+Example natva_ex4 :
+  apply_natva [Vyan C_ss; Svar V_a] C_n = C_nn.
 Proof. reflexivity. Qed.
 
 (** * Part XXIII: Unified External Sandhi *)
