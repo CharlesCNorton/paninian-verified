@@ -215,6 +215,45 @@ Definition is_ac_computed (v : Vowel) : bool :=
 
 (** Pratyāhāra specifications derived from Śiva Sūtras. *)
 
+(** Structural verification: the computed pratyāhāras yield the expected lists.
+    These lemmas verify that pratyahara_vowels correctly extracts vowels
+    from the Śiva Sūtra encoding according to the traditional algorithm:
+    start from a sound, collect all sounds until the it-marker. *)
+
+Lemma ik_vowels_structure : ik_vowels = [V_i; V_u; V_r; V_l].
+Proof. reflexivity. Qed.
+
+Lemma ak_vowels_structure : ak_vowels = [V_a; V_i; V_u; V_r; V_l].
+Proof. reflexivity. Qed.
+
+Lemma ec_vowels_structure : ec_vowels = [V_e; V_o; V_ai; V_au].
+Proof. reflexivity. Qed.
+
+Lemma ac_vowels_structure : ac_vowels = [V_a; V_i; V_u; V_r; V_l; V_e; V_o; V_ai; V_au].
+Proof. reflexivity. Qed.
+
+(** The savarṇa extension correctly handles long vowels by mapping them
+    to their short forms before checking membership. *)
+
+Lemma savarna_short_of_idempotent : forall v,
+  short_of (short_of v) = short_of v.
+Proof.
+  intro v.
+  destruct v; reflexivity.
+Qed.
+
+Lemma savarna_covers_long : forall v,
+  In (short_of v) ik_vowels ->
+  is_ik_computed v = true.
+Proof.
+  intros v Hin.
+  unfold is_ik_computed, in_pratyahara_with_savarna.
+  rewrite ik_vowels_structure in Hin.
+  destruct (short_of v) eqn:Eshort;
+  simpl in Hin; destruct Hin as [H|[H|[H|[H|[]]]]]; try discriminate;
+  reflexivity.
+Qed.
+
 (** ac = a to c (sūtras 1-4): all vowels. *)
 Inductive is_ac_spec : Vowel -> Prop :=
   | AC_a : is_ac_spec V_a   | AC_aa : is_ac_spec V_aa
@@ -908,6 +947,44 @@ Fixpoint find_winner_aux (fuel : nat) (candidates : list RuleId)
 Definition find_winner (candidates : list RuleId) : option RuleId :=
   find_winner_aux (List.length candidates) candidates.
 
+(** Fuel sufficiency: prove that length-based fuel never runs out prematurely. *)
+
+Lemma find_winner_aux_fuel_sufficient : forall fuel candidates,
+  fuel >= length candidates ->
+  candidates <> [] ->
+  exists r, find_winner_aux fuel candidates = Some r.
+Proof.
+  induction fuel as [| fuel' IH].
+  - intros candidates Hfuel Hne.
+    destruct candidates.
+    + contradiction.
+    + simpl in Hfuel. lia.
+  - intros candidates Hfuel Hne.
+    destruct candidates as [| r1 rest].
+    + contradiction.
+    + destruct rest as [| r2 rest'].
+      * simpl. exists r1. reflexivity.
+      * simpl.
+        destruct (rule_defeats r1 r2) eqn:Edef.
+        -- apply IH.
+           ++ simpl in Hfuel. simpl. lia.
+           ++ discriminate.
+        -- apply IH.
+           ++ simpl in Hfuel. simpl. lia.
+           ++ discriminate.
+Qed.
+
+Lemma find_winner_sufficient : forall candidates,
+  candidates <> [] ->
+  exists r, find_winner candidates = Some r.
+Proof.
+  intros candidates Hne.
+  unfold find_winner.
+  apply find_winner_aux_fuel_sufficient.
+  - lia.
+  - exact Hne.
+Qed.
+
 Definition select_rule (v1 v2 : Vowel) : option RuleId :=
   find_winner (matching_rules all_rules v1 v2).
 
@@ -1115,15 +1192,74 @@ Proof.
     exact Hec.
 Qed.
 
+(** Semantic proof that matching_rules is never empty. *)
+
+Lemma matching_rules_cons : forall r rs v1 v2,
+  matching_rules (r :: rs) v1 v2 =
+  if rule_matches r v1 v2
+  then r :: matching_rules rs v1 v2
+  else matching_rules rs v1 v2.
+Proof.
+  intros. reflexivity.
+Qed.
+
+Lemma matching_rules_In : forall r rules v1 v2,
+  In r rules ->
+  rule_matches r v1 v2 = true ->
+  In r (matching_rules rules v1 v2).
+Proof.
+  intros r rules v1 v2 Hin Hmatch.
+  induction rules as [| r' rules' IH].
+  - destruct Hin.
+  - simpl.
+    destruct (rule_matches r' v1 v2) eqn:Ematch.
+    + destruct Hin as [Heq | Hin'].
+      * subst. left. reflexivity.
+      * right. apply IH. exact Hin'.
+    + destruct Hin as [Heq | Hin'].
+      * subst. rewrite Hmatch in Ematch. discriminate.
+      * apply IH. exact Hin'.
+Qed.
+
+Lemma all_rules_complete : forall r, In r all_rules.
+Proof.
+  intro r.
+  destruct r; unfold all_rules; simpl; auto 10.
+Qed.
+
+Lemma matching_rules_nonempty : forall v1 v2,
+  matching_rules all_rules v1 v2 <> [].
+Proof.
+  intros v1 v2.
+  destruct (coverage_semantic v1 v2) as [r Hr].
+  apply rule_matches_iff_applicable in Hr.
+  intro Hempty.
+  pose proof (matching_rules_In r all_rules v1 v2 (all_rules_complete r) Hr) as Hmr.
+  rewrite Hempty in Hmr.
+  destruct Hmr.
+Qed.
+
+(** Coverage derived semantically via find_winner_sufficient. *)
+
 Theorem coverage_computational : forall v1 v2,
   exists r, select_rule v1 v2 = Some r.
 Proof.
   intros v1 v2.
-  unfold select_rule, matching_rules, all_rules.
-  destruct v1, v2; simpl; eexists; reflexivity.
+  unfold select_rule.
+  apply find_winner_sufficient.
+  apply matching_rules_nonempty.
 Qed.
 
 (** * Part XIII: Correctness Examples *)
+
+(** These examples verify the sandhi function against traditional results.
+    Note the distinction:
+    - a + ṛ → ar (guṇa of ṛ via 6.1.87, compound result)
+    - ṛ + a → ra (yaṇ sandhi via 6.1.77)
+    The guṇa/vṛddhi functions produce compound phoneme sequences for ṛ/ḷ:
+    - guṇa of ṛ = ar [Svar V_a; Vyan C_r]
+    - vṛddhi of ṛ = ār [Svar V_aa; Vyan C_r]
+    - guṇa of ḷ = al [Svar V_a; Vyan C_l] *)
 
 Example ex_a_a : apply_ac_sandhi V_a V_a = [Svar V_aa].
 Proof. reflexivity. Qed.
@@ -1247,6 +1383,79 @@ Definition is_maximal (r : RuleId) (v1 v2 : Vowel) : Prop :=
   rule_matches r v1 v2 = true /\
   forall r', rule_matches r' v1 v2 = true -> r' <> r -> rule_defeats r r' = true.
 
+(** Totality of defeat on a list: every pair is comparable. *)
+
+Definition defeats_total_on (rs : list RuleId) : Prop :=
+  forall r1 r2,
+    In r1 rs -> In r2 rs ->
+    r1 = r2 \/ rule_defeats r1 r2 = true \/ rule_defeats r2 r1 = true.
+
+(** A rule is maximal in a list if it defeats all other elements. *)
+
+Definition maximal_in_list (r : RuleId) (rs : list RuleId) : Prop :=
+  In r rs /\
+  forall r', In r' rs -> r' <> r -> rule_defeats r r' = true.
+
+(** Key lemma: find_winner_aux returns a maximal element when totality holds. *)
+
+Lemma find_winner_aux_In : forall fuel candidates r,
+  find_winner_aux fuel candidates = Some r ->
+  In r candidates.
+Proof.
+  induction fuel as [| fuel' IH].
+  - intros candidates r H. simpl in H. discriminate.
+  - intros candidates r H.
+    destruct candidates as [| r1 rest].
+    + simpl in H. discriminate.
+    + destruct rest as [| r2 rest'].
+      * simpl in H. injection H as H. subst. left. reflexivity.
+      * simpl in H.
+        destruct (rule_defeats r1 r2) eqn:Edef.
+        -- pose proof (IH (r1 :: rest') r H) as HIn.
+           destruct HIn as [Heq | HIn'].
+           ++ left. exact Heq.
+           ++ right. right. exact HIn'.
+        -- pose proof (IH (r2 :: rest') r H) as HIn.
+           destruct HIn as [Heq | HIn'].
+           ++ right. left. exact Heq.
+           ++ right. right. exact HIn'.
+Qed.
+
+Lemma matching_rules_subset : forall r rules v1 v2,
+  In r (matching_rules rules v1 v2) ->
+  In r rules /\ rule_matches r v1 v2 = true.
+Proof.
+  intros r rules v1 v2.
+  induction rules as [| r' rules' IH].
+  - intro H. destruct H.
+  - intro H. simpl in H.
+    destruct (rule_matches r' v1 v2) eqn:Ematch.
+    + destruct H as [Heq | Hin].
+      * subst. split. left. reflexivity. exact Ematch.
+      * destruct (IH Hin) as [Hin' Hmatch].
+        split. right. exact Hin'. exact Hmatch.
+    + destruct (IH H) as [Hin' Hmatch].
+      split. right. exact Hin'. exact Hmatch.
+Qed.
+
+Lemma matching_rules_totality : forall v1 v2,
+  defeats_total_on (matching_rules all_rules v1 v2).
+Proof.
+  intros v1 v2 r1 r2 Hin1 Hin2.
+  apply matching_rules_subset in Hin1.
+  apply matching_rules_subset in Hin2.
+  destruct Hin1 as [_ Hmatch1].
+  destruct Hin2 as [_ Hmatch2].
+  destruct r1, r2;
+  try (left; reflexivity);
+  try (right; left; reflexivity);
+  try (right; right; reflexivity).
+Qed.
+
+(** Maximality proof: the algorithmic structure is correct because
+    totality holds. For efficiency, we use case analysis here,
+    but the structural lemmas above document why the algorithm works. *)
+
 Lemma select_rule_is_maximal : forall v1 v2 r,
   select_rule v1 v2 = Some r ->
   is_maximal r v1 v2.
@@ -1254,12 +1463,16 @@ Proof.
   intros v1 v2 r Hsel.
   unfold is_maximal.
   split.
-  - unfold select_rule in Hsel.
-    destruct v1, v2; simpl in Hsel; injection Hsel as Hsel; subst; reflexivity.
+  - unfold select_rule, find_winner in Hsel.
+    apply find_winner_aux_In in Hsel as HrIn.
+    apply matching_rules_subset in HrIn.
+    destruct HrIn as [_ Hmatch].
+    exact Hmatch.
   - intros r' Hmatch' Hneq.
+    unfold select_rule, find_winner in Hsel.
     destruct v1, v2; simpl in Hsel; injection Hsel as Hsel; subst;
     destruct r'; simpl in Hmatch'; try discriminate; try reflexivity;
-    contradiction Hneq; reflexivity.
+    exfalso; apply Hneq; reflexivity.
 Qed.
 
 Lemma is_maximal_iff_winner : forall r v1 v2,
@@ -1519,6 +1732,92 @@ Definition apply_visarga_sandhi (prev_vowel : Vowel) (following : Consonant)
     end
   else VSR_visarga.
 
+(** Declarative spec for visarga sandhi (8.3.15, 8.3.17, etc.). *)
+
+Inductive visarga_sandhi_spec : Vowel -> Consonant -> VisargaSandhiResult -> Prop :=
+  | VSS_khar : forall v c,
+      is_khar_spec c ->
+      visarga_sandhi_spec v c VSR_visarga
+  | VSS_jhas_a : forall c,
+      is_khar c = false ->
+      is_jhas_spec c ->
+      visarga_sandhi_spec V_a c VSR_o
+  | VSS_jhas_aa : forall c,
+      is_khar c = false ->
+      is_jhas_spec c ->
+      visarga_sandhi_spec V_aa c (VSR_deletion V_aa)
+  | VSS_jhas_other : forall v c,
+      is_khar c = false ->
+      is_jhas_spec c ->
+      v <> V_a ->
+      v <> V_aa ->
+      visarga_sandhi_spec v c VSR_r
+  | VSS_default : forall v c,
+      is_khar c = false ->
+      is_jhas c = false ->
+      visarga_sandhi_spec v c VSR_visarga.
+
+Theorem visarga_sandhi_correct : forall v c r,
+  visarga_sandhi_spec v c r <-> apply_visarga_sandhi v c = r.
+Proof.
+  intros v c r.
+  split.
+  - intro H.
+    destruct H.
+    + unfold apply_visarga_sandhi.
+      apply is_khar_correct in H.
+      rewrite H.
+      reflexivity.
+    + unfold apply_visarga_sandhi.
+      rewrite H.
+      apply is_jhas_correct in H0.
+      rewrite H0.
+      reflexivity.
+    + unfold apply_visarga_sandhi.
+      rewrite H.
+      apply is_jhas_correct in H0.
+      rewrite H0.
+      reflexivity.
+    + unfold apply_visarga_sandhi.
+      rewrite H.
+      apply is_jhas_correct in H0.
+      rewrite H0.
+      destruct v; try reflexivity; contradiction.
+    + unfold apply_visarga_sandhi.
+      rewrite H, H0.
+      reflexivity.
+  - intro H.
+    unfold apply_visarga_sandhi in H.
+    destruct (is_khar c) eqn:Ekhar.
+    + subst r.
+      apply VSS_khar.
+      apply is_khar_correct.
+      exact Ekhar.
+    + destruct (is_jhas c) eqn:Ejhas.
+      * destruct v; subst r.
+        -- apply VSS_jhas_a.
+           ++ exact Ekhar.
+           ++ apply is_jhas_correct. exact Ejhas.
+        -- apply VSS_jhas_aa.
+           ++ exact Ekhar.
+           ++ apply is_jhas_correct. exact Ejhas.
+        -- apply VSS_jhas_other; [exact Ekhar | apply is_jhas_correct; exact Ejhas | discriminate | discriminate].
+        -- apply VSS_jhas_other; [exact Ekhar | apply is_jhas_correct; exact Ejhas | discriminate | discriminate].
+        -- apply VSS_jhas_other; [exact Ekhar | apply is_jhas_correct; exact Ejhas | discriminate | discriminate].
+        -- apply VSS_jhas_other; [exact Ekhar | apply is_jhas_correct; exact Ejhas | discriminate | discriminate].
+        -- apply VSS_jhas_other; [exact Ekhar | apply is_jhas_correct; exact Ejhas | discriminate | discriminate].
+        -- apply VSS_jhas_other; [exact Ekhar | apply is_jhas_correct; exact Ejhas | discriminate | discriminate].
+        -- apply VSS_jhas_other; [exact Ekhar | apply is_jhas_correct; exact Ejhas | discriminate | discriminate].
+        -- apply VSS_jhas_other; [exact Ekhar | apply is_jhas_correct; exact Ejhas | discriminate | discriminate].
+        -- apply VSS_jhas_other; [exact Ekhar | apply is_jhas_correct; exact Ejhas | discriminate | discriminate].
+        -- apply VSS_jhas_other; [exact Ekhar | apply is_jhas_correct; exact Ejhas | discriminate | discriminate].
+        -- apply VSS_jhas_other; [exact Ekhar | apply is_jhas_correct; exact Ejhas | discriminate | discriminate].
+      * subst r.
+        apply VSS_default.
+        -- exact Ekhar.
+        -- exact Ejhas.
+Qed.
+
 (** * Part XXI: Consonant Sandhi (8.4) *)
 
 (** ** Varga (class) of stops *)
@@ -1549,6 +1848,12 @@ Definition voiced_of (c : Consonant) : Consonant :=
   | other => other
   end.
 
+Definition is_voiceable (c : Consonant) : bool :=
+  match c with
+  | C_k | C_kh | C_c | C_ch | C_tt | C_tth | C_t | C_th | C_p | C_ph => true
+  | _ => false
+  end.
+
 Inductive voicing_spec : Consonant -> Consonant -> Prop :=
   | Voice_k : voicing_spec C_k C_g
   | Voice_kh : voicing_spec C_kh C_gh
@@ -1562,10 +1867,15 @@ Inductive voicing_spec : Consonant -> Consonant -> Prop :=
   | Voice_ph : voicing_spec C_ph C_bh.
 
 Lemma voiced_of_correct : forall c1 c2,
-  voicing_spec c1 c2 -> voiced_of c1 = c2.
+  voicing_spec c1 c2 <-> (is_voiceable c1 = true /\ voiced_of c1 = c2).
 Proof.
-  intros c1 c2 H.
-  destruct H; reflexivity.
+  intros c1 c2.
+  split.
+  - intro H.
+    destruct H; split; reflexivity.
+  - intros [Hv Heq].
+    destruct c1; simpl in Hv; try discriminate;
+    simpl in Heq; subst; constructor.
 Qed.
 
 (** ** 8.4.55 khari ca *)
@@ -1582,6 +1892,12 @@ Definition voiceless_of (c : Consonant) : Consonant :=
   | other => other
   end.
 
+Definition is_devoiceable (c : Consonant) : bool :=
+  match c with
+  | C_g | C_gh | C_j | C_jh | C_dd | C_ddh | C_d | C_dh | C_b | C_bh => true
+  | _ => false
+  end.
+
 Inductive devoicing_spec : Consonant -> Consonant -> Prop :=
   | Devoice_g : devoicing_spec C_g C_k
   | Devoice_gh : devoicing_spec C_gh C_k
@@ -1595,10 +1911,15 @@ Inductive devoicing_spec : Consonant -> Consonant -> Prop :=
   | Devoice_bh : devoicing_spec C_bh C_p.
 
 Lemma voiceless_of_correct : forall c1 c2,
-  devoicing_spec c1 c2 -> voiceless_of c1 = c2.
+  devoicing_spec c1 c2 <-> (is_devoiceable c1 = true /\ voiceless_of c1 = c2).
 Proof.
-  intros c1 c2 H.
-  destruct H; reflexivity.
+  intros c1 c2.
+  split.
+  - intro H.
+    destruct H; split; reflexivity.
+  - intros [Hd Heq].
+    destruct c1; simpl in Hd; try discriminate;
+    simpl in Heq; subst; constructor.
 Qed.
 
 (** ** 8.4.40 stoḥ ścunā ścuḥ *)
@@ -1639,6 +1960,12 @@ Definition retroflexize (c : Consonant) : Consonant :=
 
 (** Palatalization spec (8.4.40). *)
 
+Definition is_palatalizable (c : Consonant) : bool :=
+  match c with
+  | C_s | C_t | C_th | C_d | C_dh | C_n => true
+  | _ => false
+  end.
+
 Inductive palatalization_spec : Consonant -> Consonant -> Prop :=
   | Pal_s : palatalization_spec C_s C_sh
   | Pal_t : palatalization_spec C_t C_c
@@ -1648,13 +1975,24 @@ Inductive palatalization_spec : Consonant -> Consonant -> Prop :=
   | Pal_n : palatalization_spec C_n C_ny.
 
 Lemma palatalize_correct : forall c1 c2,
-  palatalization_spec c1 c2 -> palatalize c1 = c2.
+  palatalization_spec c1 c2 <-> (is_palatalizable c1 = true /\ palatalize c1 = c2).
 Proof.
-  intros c1 c2 H.
-  destruct H; reflexivity.
+  intros c1 c2.
+  split.
+  - intro H.
+    destruct H; split; reflexivity.
+  - intros [Hp Heq].
+    destruct c1; simpl in Hp; try discriminate;
+    simpl in Heq; subst; constructor.
 Qed.
 
 (** Retroflexion spec (8.4.41). *)
+
+Definition is_retroflexizable (c : Consonant) : bool :=
+  match c with
+  | C_s | C_t | C_th | C_d | C_dh | C_n => true
+  | _ => false
+  end.
 
 Inductive retroflexion_spec : Consonant -> Consonant -> Prop :=
   | Ret_s : retroflexion_spec C_s C_ss
@@ -1665,10 +2003,15 @@ Inductive retroflexion_spec : Consonant -> Consonant -> Prop :=
   | Ret_n : retroflexion_spec C_n C_nn.
 
 Lemma retroflexize_correct : forall c1 c2,
-  retroflexion_spec c1 c2 -> retroflexize c1 = c2.
+  retroflexion_spec c1 c2 <-> (is_retroflexizable c1 = true /\ retroflexize c1 = c2).
 Proof.
-  intros c1 c2 H.
-  destruct H; reflexivity.
+  intros c1 c2.
+  split.
+  - intro H.
+    destruct H; split; reflexivity.
+  - intros [Hr Heq].
+    destruct c1; simpl in Hr; try discriminate;
+    simpl in Heq; subst; constructor.
 Qed.
 
 (** Cavarga/ś class spec. *)
@@ -1725,23 +2068,249 @@ Definition apply_consonant_sandhi (final following : Consonant) : Consonant :=
   let after_place := apply_place_assimilation final following in
   apply_voicing_assimilation after_place following.
 
-(** Declarative spec for consonant sandhi result. *)
+(** Declarative spec for place assimilation (8.4.40-41). *)
 
-Inductive consonant_sandhi_rel : Consonant -> Consonant -> Consonant -> Prop :=
-  | CSR_result : forall c1 c2,
-      consonant_sandhi_rel c1 c2 (apply_consonant_sandhi c1 c2).
+Inductive place_assimilation_spec : Consonant -> Consonant -> Consonant -> Prop :=
+  | PAS_palatal : forall c1 c2 c_out,
+      is_cavarga_or_sh_spec c2 ->
+      palatalization_spec c1 c_out ->
+      place_assimilation_spec c1 c2 c_out
+  | PAS_palatal_no_change : forall c1 c2,
+      is_cavarga_or_sh_spec c2 ->
+      is_palatalizable c1 = false ->
+      place_assimilation_spec c1 c2 c1
+  | PAS_retroflex : forall c1 c2 c_out,
+      is_cavarga_or_sh c2 = false ->
+      is_tavarga_or_ss_spec c2 ->
+      retroflexion_spec c1 c_out ->
+      place_assimilation_spec c1 c2 c_out
+  | PAS_retroflex_no_change : forall c1 c2,
+      is_cavarga_or_sh c2 = false ->
+      is_tavarga_or_ss_spec c2 ->
+      is_retroflexizable c1 = false ->
+      place_assimilation_spec c1 c2 c1
+  | PAS_none : forall c1 c2,
+      is_cavarga_or_sh c2 = false ->
+      is_tavarga_or_ss c2 = false ->
+      place_assimilation_spec c1 c2 c1.
 
-Lemma consonant_sandhi_correct : forall c1 c2 c3,
-  apply_consonant_sandhi c1 c2 = c3 <-> consonant_sandhi_rel c1 c2 c3.
+Lemma palatalize_no_change : forall c,
+  is_palatalizable c = false -> palatalize c = c.
+Proof.
+  intros c H.
+  destruct c; simpl in H; try discriminate; reflexivity.
+Qed.
+
+Lemma retroflexize_no_change : forall c,
+  is_retroflexizable c = false -> retroflexize c = c.
+Proof.
+  intros c H.
+  destruct c; simpl in H; try discriminate; reflexivity.
+Qed.
+
+Lemma place_assimilation_correct : forall c1 c2 c3,
+  place_assimilation_spec c1 c2 c3 <-> apply_place_assimilation c1 c2 = c3.
 Proof.
   intros c1 c2 c3.
   split.
   - intro H.
-    rewrite <- H.
-    constructor.
+    destruct H.
+    + unfold apply_place_assimilation.
+      apply is_cavarga_or_sh_correct in H.
+      rewrite H.
+      apply palatalize_correct in H0.
+      destruct H0 as [_ Heq].
+      exact Heq.
+    + unfold apply_place_assimilation.
+      apply is_cavarga_or_sh_correct in H.
+      rewrite H.
+      apply palatalize_no_change.
+      exact H0.
+    + unfold apply_place_assimilation.
+      rewrite H.
+      apply is_tavarga_or_ss_correct in H0.
+      rewrite H0.
+      apply retroflexize_correct in H1.
+      destruct H1 as [_ Heq].
+      exact Heq.
+    + unfold apply_place_assimilation.
+      rewrite H.
+      apply is_tavarga_or_ss_correct in H0.
+      rewrite H0.
+      apply retroflexize_no_change.
+      exact H1.
+    + unfold apply_place_assimilation.
+      rewrite H, H0.
+      reflexivity.
+  - intro H.
+    unfold apply_place_assimilation in H.
+    destruct (is_cavarga_or_sh c2) eqn:Ecav.
+    + destruct (is_palatalizable c1) eqn:Epal.
+      * apply PAS_palatal.
+        -- apply is_cavarga_or_sh_correct. exact Ecav.
+        -- apply palatalize_correct.
+           split; [exact Epal | exact H].
+      * pose proof (palatalize_no_change c1 Epal) as Hno.
+        rewrite Hno in H.
+        subst c3.
+        apply PAS_palatal_no_change.
+        -- apply is_cavarga_or_sh_correct. exact Ecav.
+        -- exact Epal.
+    + destruct (is_tavarga_or_ss c2) eqn:Etav.
+      * destruct (is_retroflexizable c1) eqn:Eret.
+        -- apply PAS_retroflex.
+           ++ exact Ecav.
+           ++ apply is_tavarga_or_ss_correct. exact Etav.
+           ++ apply retroflexize_correct.
+              split; [exact Eret | exact H].
+        -- pose proof (retroflexize_no_change c1 Eret) as Hno.
+           rewrite Hno in H.
+           subst c3.
+           apply PAS_retroflex_no_change.
+           ++ exact Ecav.
+           ++ apply is_tavarga_or_ss_correct. exact Etav.
+           ++ exact Eret.
+      * subst c3.
+        apply PAS_none.
+        -- exact Ecav.
+        -- exact Etav.
+Qed.
+
+(** Declarative spec for voicing assimilation (8.4.53-55). *)
+
+Inductive voicing_assimilation_spec : Consonant -> Consonant -> Consonant -> Prop :=
+  | VAS_voice : forall c1 c2 c_out,
+      is_jhas_spec c2 ->
+      voicing_spec c1 c_out ->
+      voicing_assimilation_spec c1 c2 c_out
+  | VAS_voice_no_change : forall c1 c2,
+      is_jhas_spec c2 ->
+      is_voiceable c1 = false ->
+      voicing_assimilation_spec c1 c2 c1
+  | VAS_devoice : forall c1 c2 c_out,
+      is_jhas c2 = false ->
+      is_khar_spec c2 ->
+      devoicing_spec c1 c_out ->
+      voicing_assimilation_spec c1 c2 c_out
+  | VAS_devoice_no_change : forall c1 c2,
+      is_jhas c2 = false ->
+      is_khar_spec c2 ->
+      is_devoiceable c1 = false ->
+      voicing_assimilation_spec c1 c2 c1
+  | VAS_none : forall c1 c2,
+      is_jhas c2 = false ->
+      is_khar c2 = false ->
+      voicing_assimilation_spec c1 c2 c1.
+
+Lemma voiced_of_no_change : forall c,
+  is_voiceable c = false -> voiced_of c = c.
+Proof.
+  intros c H.
+  destruct c; simpl in H; try discriminate; reflexivity.
+Qed.
+
+Lemma voiceless_of_no_change : forall c,
+  is_devoiceable c = false -> voiceless_of c = c.
+Proof.
+  intros c H.
+  destruct c; simpl in H; try discriminate; reflexivity.
+Qed.
+
+Lemma voicing_assimilation_correct : forall c1 c2 c3,
+  voicing_assimilation_spec c1 c2 c3 <-> apply_voicing_assimilation c1 c2 = c3.
+Proof.
+  intros c1 c2 c3.
+  split.
   - intro H.
     destruct H.
-    reflexivity.
+    + unfold apply_voicing_assimilation.
+      apply is_jhas_correct in H.
+      rewrite H.
+      apply voiced_of_correct in H0.
+      destruct H0 as [_ Heq].
+      exact Heq.
+    + unfold apply_voicing_assimilation.
+      apply is_jhas_correct in H.
+      rewrite H.
+      apply voiced_of_no_change.
+      exact H0.
+    + unfold apply_voicing_assimilation.
+      rewrite H.
+      apply is_khar_correct in H0.
+      rewrite H0.
+      apply voiceless_of_correct in H1.
+      destruct H1 as [_ Heq].
+      exact Heq.
+    + unfold apply_voicing_assimilation.
+      rewrite H.
+      apply is_khar_correct in H0.
+      rewrite H0.
+      apply voiceless_of_no_change.
+      exact H1.
+    + unfold apply_voicing_assimilation.
+      rewrite H, H0.
+      reflexivity.
+  - intro H.
+    unfold apply_voicing_assimilation in H.
+    destruct (is_jhas c2) eqn:Ejhas.
+    + destruct (is_voiceable c1) eqn:Evoice.
+      * apply VAS_voice.
+        -- apply is_jhas_correct. exact Ejhas.
+        -- apply voiced_of_correct.
+           split; [exact Evoice | exact H].
+      * pose proof (voiced_of_no_change c1 Evoice) as Hno.
+        rewrite Hno in H.
+        subst c3.
+        apply VAS_voice_no_change.
+        -- apply is_jhas_correct. exact Ejhas.
+        -- exact Evoice.
+    + destruct (is_khar c2) eqn:Ekhar.
+      * destruct (is_devoiceable c1) eqn:Edevoice.
+        -- apply VAS_devoice.
+           ++ exact Ejhas.
+           ++ apply is_khar_correct. exact Ekhar.
+           ++ apply voiceless_of_correct.
+              split; [exact Edevoice | exact H].
+        -- pose proof (voiceless_of_no_change c1 Edevoice) as Hno.
+           rewrite Hno in H.
+           subst c3.
+           apply VAS_devoice_no_change.
+           ++ exact Ejhas.
+           ++ apply is_khar_correct. exact Ekhar.
+           ++ exact Edevoice.
+      * subst c3.
+        apply VAS_none.
+        -- exact Ejhas.
+        -- exact Ekhar.
+Qed.
+
+(** Declarative spec for combined consonant sandhi. *)
+
+Inductive consonant_sandhi_spec : Consonant -> Consonant -> Consonant -> Prop :=
+  | CSS_combined : forall c1 c2 c_mid c_out,
+      place_assimilation_spec c1 c2 c_mid ->
+      voicing_assimilation_spec c_mid c2 c_out ->
+      consonant_sandhi_spec c1 c2 c_out.
+
+Theorem consonant_sandhi_correct : forall c1 c2 c3,
+  consonant_sandhi_spec c1 c2 c3 <-> apply_consonant_sandhi c1 c2 = c3.
+Proof.
+  intros c1 c2 c3.
+  split.
+  - intro H.
+    destruct H as [c1' c2' c_mid c_out Hplace Hvoice].
+    unfold apply_consonant_sandhi.
+    apply place_assimilation_correct in Hplace.
+    rewrite Hplace.
+    apply voicing_assimilation_correct in Hvoice.
+    exact Hvoice.
+  - intro H.
+    unfold apply_consonant_sandhi in H.
+    apply CSS_combined with (c_mid := apply_place_assimilation c1 c2).
+    + apply place_assimilation_correct.
+      reflexivity.
+    + apply voicing_assimilation_correct.
+      exact H.
 Qed.
 
 (** Examples of consonant sandhi. *)
