@@ -3324,6 +3324,681 @@ Example natva_ex4 :
   apply_natva [Vyan C_ss; Svar V_a] C_n = C_nn.
 Proof. reflexivity. Qed.
 
+(** * Part XXII-C: Additional Consonant Sandhi Rules (8.4) *)
+
+(** ** 8.4.44 śāt *)
+(** "After ś, [dental t becomes c]."
+    When ś precedes t, the t becomes c (palatalization triggered by ś). *)
+
+Definition apply_8_4_44 (preceding : Consonant) (c : Consonant) : Consonant :=
+  match preceding, c with
+  | C_sh, C_t => C_c
+  | C_sh, C_th => C_ch
+  | C_sh, C_d => C_j
+  | C_sh, C_dh => C_jh
+  | C_sh, C_n => C_ny
+  | _, _ => c
+  end.
+
+Inductive shat_spec : Consonant -> Consonant -> Consonant -> Prop :=
+  | Shat_t : shat_spec C_sh C_t C_c
+  | Shat_th : shat_spec C_sh C_th C_ch
+  | Shat_d : shat_spec C_sh C_d C_j
+  | Shat_dh : shat_spec C_sh C_dh C_jh
+  | Shat_n : shat_spec C_sh C_n C_ny
+  | Shat_other : forall c1 c2,
+      (c1 <> C_sh \/ (c2 <> C_t /\ c2 <> C_th /\ c2 <> C_d /\ c2 <> C_dh /\ c2 <> C_n)) ->
+      shat_spec c1 c2 c2.
+
+Lemma apply_8_4_44_correct : forall c1 c2 c3,
+  apply_8_4_44 c1 c2 = c3 <-> shat_spec c1 c2 c3.
+Proof.
+  intros c1 c2 c3.
+  split; intro H.
+  - destruct c1; destruct c2; simpl in H; subst;
+    solve [ constructor
+          | apply Shat_other; left; discriminate
+          | apply Shat_other; right; repeat split; discriminate ].
+  - inversion H; subst.
+    + reflexivity.
+    + reflexivity.
+    + reflexivity.
+    + reflexivity.
+    + reflexivity.
+    + destruct H0 as [Hneq | [H1 [H2 [H3 [H4 H5]]]]].
+      * destruct c1; simpl; try reflexivity.
+        contradiction.
+      * destruct c1; simpl; try reflexivity.
+        destruct c3; simpl; try reflexivity;
+        first [ exfalso; apply H1; reflexivity
+              | exfalso; apply H2; reflexivity
+              | exfalso; apply H3; reflexivity
+              | exfalso; apply H4; reflexivity
+              | exfalso; apply H5; reflexivity ].
+Qed.
+
+Example shat_ex1 : apply_8_4_44 C_sh C_t = C_c.
+Proof. reflexivity. Qed.
+
+Example shat_ex2 : apply_8_4_44 C_s C_t = C_t.
+Proof. reflexivity. Qed.
+
+(** ** 8.4.45 yaro 'nunāsike 'nunāsiko vā *)
+(** "A stop [yar] optionally becomes its nasal [anunāsika] before a nasal."
+    This is a vikalpa (optional) rule. *)
+
+Definition nasal_of_varga (c : Consonant) : option Consonant :=
+  match c with
+  | C_k | C_kh | C_g | C_gh => Some C_ng
+  | C_c | C_ch | C_j | C_jh => Some C_ny
+  | C_tt | C_tth | C_dd | C_ddh => Some C_nn
+  | C_t | C_th | C_d | C_dh => Some C_n
+  | C_p | C_ph | C_b | C_bh => Some C_m
+  | _ => None
+  end.
+
+Definition is_nasal (c : Consonant) : bool :=
+  match c with
+  | C_ng | C_ny | C_nn | C_n | C_m => true
+  | _ => false
+  end.
+
+Definition is_yar (c : Consonant) : bool :=
+  match c with
+  | C_k | C_kh | C_g | C_gh
+  | C_c | C_ch | C_j | C_jh
+  | C_tt | C_tth | C_dd | C_ddh
+  | C_t | C_th | C_d | C_dh
+  | C_p | C_ph | C_b | C_bh => true
+  | _ => false
+  end.
+
+Inductive nasalization_8_4_45 : Consonant -> Consonant -> option Consonant -> Prop :=
+  | Nas_applies : forall c1 c2 c_nasal,
+      is_yar c1 = true ->
+      is_nasal c2 = true ->
+      nasal_of_varga c1 = Some c_nasal ->
+      nasalization_8_4_45 c1 c2 (Some c_nasal)
+  | Nas_no_yar : forall c1 c2,
+      is_yar c1 = false ->
+      nasalization_8_4_45 c1 c2 None
+  | Nas_no_nasal : forall c1 c2,
+      is_nasal c2 = false ->
+      nasalization_8_4_45 c1 c2 None.
+
+Definition apply_8_4_45 (c1 c2 : Consonant) : option Consonant :=
+  if is_yar c1 && is_nasal c2 then nasal_of_varga c1
+  else None.
+
+Lemma apply_8_4_45_correct : forall c1 c2 result,
+  apply_8_4_45 c1 c2 = result <-> nasalization_8_4_45 c1 c2 result.
+Proof.
+  intros c1 c2 result.
+  split.
+  - intro H.
+    unfold apply_8_4_45 in H.
+    destruct (is_yar c1) eqn:Eyar.
+    + destruct (is_nasal c2) eqn:Enas.
+      * simpl in H. subst.
+        destruct (nasal_of_varga c1) eqn:Enov.
+        -- apply Nas_applies with (c_nasal := c); auto.
+        -- apply Nas_no_yar. destruct c1; simpl in Eyar; discriminate.
+      * simpl in H. subst. apply Nas_no_nasal. exact Enas.
+    + simpl in H. subst. apply Nas_no_yar. exact Eyar.
+  - intro H.
+    destruct H.
+    + unfold apply_8_4_45. rewrite H, H0. simpl. exact H1.
+    + unfold apply_8_4_45. rewrite H. reflexivity.
+    + unfold apply_8_4_45.
+      destruct (is_yar c1) eqn:Eyar; simpl.
+      * rewrite H. reflexivity.
+      * reflexivity.
+Qed.
+
+Example nas_ex1 : apply_8_4_45 C_k C_n = Some C_ng.
+Proof. reflexivity. Qed.
+
+Example nas_ex2 : apply_8_4_45 C_t C_m = Some C_n.
+Proof. reflexivity. Qed.
+
+Example nas_ex3 : apply_8_4_45 C_s C_n = None.
+Proof. reflexivity. Qed.
+
+(** ** 8.4.58 anusvārasya yayi parasavarṇaḥ *)
+(** "Anusvāra becomes [parasavarṇa, i.e., homorganic nasal] before yay
+    (semivowels and stops)." *)
+
+Definition homorganic_nasal_of (c : Consonant) : option Consonant :=
+  match c with
+  | C_k | C_kh | C_g | C_gh | C_ng => Some C_ng
+  | C_c | C_ch | C_j | C_jh | C_ny => Some C_ny
+  | C_tt | C_tth | C_dd | C_ddh | C_nn => Some C_nn
+  | C_t | C_th | C_d | C_dh | C_n => Some C_n
+  | C_p | C_ph | C_b | C_bh | C_m => Some C_m
+  | C_y => Some C_ny
+  | C_l => Some C_n
+  | C_v => Some C_m
+  | _ => None
+  end.
+
+Definition is_yay (c : Consonant) : bool :=
+  match c with
+  | C_y | C_v
+  | C_k | C_kh | C_g | C_gh | C_ng
+  | C_c | C_ch | C_j | C_jh | C_ny
+  | C_tt | C_tth | C_dd | C_ddh | C_nn
+  | C_t | C_th | C_d | C_dh | C_n
+  | C_p | C_ph | C_b | C_bh | C_m => true
+  | _ => false
+  end.
+
+Inductive anusvara_assimilation_spec : Consonant -> option Consonant -> Prop :=
+  | AAS_assimilate : forall c c_nasal,
+      is_yay c = true ->
+      homorganic_nasal_of c = Some c_nasal ->
+      anusvara_assimilation_spec c (Some c_nasal)
+  | AAS_no_change : forall c,
+      is_yay c = false ->
+      anusvara_assimilation_spec c None.
+
+Definition apply_8_4_58 (following : Consonant) : option Consonant :=
+  if is_yay following then homorganic_nasal_of following
+  else None.
+
+Lemma apply_8_4_58_correct : forall c result,
+  apply_8_4_58 c = result <-> anusvara_assimilation_spec c result.
+Proof.
+  intros c result.
+  split.
+  - intro H.
+    unfold apply_8_4_58 in H.
+    destruct (is_yay c) eqn:Eyay.
+    + subst.
+      destruct (homorganic_nasal_of c) eqn:Ehom.
+      * apply AAS_assimilate with (c_nasal := c0); auto.
+      * apply AAS_no_change. destruct c; simpl in Eyay; discriminate.
+    + subst. apply AAS_no_change. exact Eyay.
+  - intro H.
+    destruct H.
+    + unfold apply_8_4_58. rewrite H. exact H0.
+    + unfold apply_8_4_58. rewrite H. reflexivity.
+Qed.
+
+Example anusvara_ex1 : apply_8_4_58 C_k = Some C_ng.
+Proof. reflexivity. Qed.
+
+Example anusvara_ex2 : apply_8_4_58 C_c = Some C_ny.
+Proof. reflexivity. Qed.
+
+Example anusvara_ex3 : apply_8_4_58 C_t = Some C_n.
+Proof. reflexivity. Qed.
+
+Example anusvara_ex4 : apply_8_4_58 C_p = Some C_m.
+Proof. reflexivity. Qed.
+
+Example anusvara_ex5 : apply_8_4_58 C_s = None.
+Proof. reflexivity. Qed.
+
+(** ** 8.4.60 tor li *)
+(** "t and d [tor] become l before l [li]." *)
+
+Definition apply_8_4_60 (c following : Consonant) : Consonant :=
+  match c, following with
+  | C_t, C_l => C_l
+  | C_d, C_l => C_l
+  | C_n, C_l => C_l
+  | _, _ => c
+  end.
+
+Inductive tor_li_spec : Consonant -> Consonant -> Consonant -> Prop :=
+  | TL_t : tor_li_spec C_t C_l C_l
+  | TL_d : tor_li_spec C_d C_l C_l
+  | TL_n : tor_li_spec C_n C_l C_l
+  | TL_other : forall c1 c2,
+      (c2 <> C_l \/ (c1 <> C_t /\ c1 <> C_d /\ c1 <> C_n)) ->
+      tor_li_spec c1 c2 c1.
+
+Lemma apply_8_4_60_correct : forall c1 c2 c3,
+  apply_8_4_60 c1 c2 = c3 <-> tor_li_spec c1 c2 c3.
+Proof.
+  intros c1 c2 c3.
+  split; intro H.
+  - destruct c1; destruct c2; simpl in H; subst;
+    solve [ constructor
+          | apply TL_other; left; discriminate
+          | apply TL_other; right; repeat split; discriminate ].
+  - inversion H; subst.
+    + reflexivity.
+    + reflexivity.
+    + reflexivity.
+    + destruct H0 as [Hneq | [H1 [H2 H3]]].
+      * destruct c2; try contradiction; destruct c3; reflexivity.
+      * destruct c3, c2; simpl; try reflexivity;
+        first [ exfalso; apply H1; reflexivity
+              | exfalso; apply H2; reflexivity
+              | exfalso; apply H3; reflexivity ].
+Qed.
+
+Example tor_li_ex1 : apply_8_4_60 C_t C_l = C_l.
+Proof. reflexivity. Qed.
+
+Example tor_li_ex2 : apply_8_4_60 C_d C_l = C_l.
+Proof. reflexivity. Qed.
+
+Example tor_li_ex3 : apply_8_4_60 C_t C_t = C_t.
+Proof. reflexivity. Qed.
+
+(** ** 8.4.63 śaś cho 'ṭi *)
+(** "ś becomes ch before ṭ-class (including ṣ)." *)
+
+Definition apply_8_4_63 (c following : Consonant) : Consonant :=
+  match c with
+  | C_sh =>
+      if is_tavarga_or_ss following then C_ch
+      else c
+  | _ => c
+  end.
+
+Inductive shas_cha_spec : Consonant -> Consonant -> Consonant -> Prop :=
+  | SC_applies : forall c2,
+      is_tavarga_or_ss_spec c2 ->
+      shas_cha_spec C_sh c2 C_ch
+  | SC_no_trigger : forall c2,
+      is_tavarga_or_ss c2 = false ->
+      shas_cha_spec C_sh c2 C_sh
+  | SC_not_sh : forall c1 c2,
+      c1 <> C_sh ->
+      shas_cha_spec c1 c2 c1.
+
+Lemma apply_8_4_63_correct : forall c1 c2 c3,
+  apply_8_4_63 c1 c2 = c3 <-> shas_cha_spec c1 c2 c3.
+Proof.
+  intros c1 c2 c3.
+  split.
+  - intro H.
+    unfold apply_8_4_63 in H.
+    destruct c1; try (subst; apply SC_not_sh; discriminate).
+    destruct (is_tavarga_or_ss c2) eqn:E.
+    + subst. apply SC_applies. apply is_tavarga_or_ss_correct. exact E.
+    + subst. apply SC_no_trigger. exact E.
+  - intro H.
+    destruct H.
+    + unfold apply_8_4_63.
+      apply is_tavarga_or_ss_correct in H.
+      rewrite H. reflexivity.
+    + unfold apply_8_4_63. rewrite H. reflexivity.
+    + unfold apply_8_4_63.
+      destruct c1; try reflexivity; contradiction.
+Qed.
+
+Example shas_cha_ex1 : apply_8_4_63 C_sh C_tt = C_ch.
+Proof. reflexivity. Qed.
+
+Example shas_cha_ex2 : apply_8_4_63 C_sh C_ss = C_ch.
+Proof. reflexivity. Qed.
+
+Example shas_cha_ex3 : apply_8_4_63 C_sh C_t = C_sh.
+Proof. reflexivity. Qed.
+
+(** ** 8.4.65 jharo jhari savarṇe *)
+(** "jhar [non-nasal stops] become savarṇa [homorganic] before jhar when
+    followed by the same." This handles gemination/assimilation at boundaries. *)
+
+Definition is_jhar (c : Consonant) : bool :=
+  match c with
+  | C_k | C_kh | C_g | C_gh
+  | C_c | C_ch | C_j | C_jh
+  | C_tt | C_tth | C_dd | C_ddh
+  | C_t | C_th | C_d | C_dh
+  | C_p | C_ph | C_b | C_bh => true
+  | _ => false
+  end.
+
+Definition same_varga (c1 c2 : Consonant) : bool :=
+  match consonant_varga c1, consonant_varga c2 with
+  | Some v1, Some v2 =>
+      match v1, v2 with
+      | Kavarga, Kavarga => true
+      | Cavarga, Cavarga => true
+      | Tavarga, Tavarga => true
+      | Tavarga2, Tavarga2 => true
+      | Pavarga, Pavarga => true
+      | _, _ => false
+      end
+  | _, _ => false
+  end.
+
+Definition first_of_varga (v : Varga) : Consonant :=
+  match v with
+  | Kavarga => C_k
+  | Cavarga => C_c
+  | Tavarga => C_tt
+  | Tavarga2 => C_t
+  | Pavarga => C_p
+  end.
+
+Definition apply_8_4_65 (c1 c2 : Consonant) : Consonant :=
+  if is_jhar c1 && is_jhar c2 && same_varga c1 c2 then
+    match consonant_varga c2 with
+    | Some v => first_of_varga v
+    | None => c1
+    end
+  else c1.
+
+Inductive jhar_savarna_spec : Consonant -> Consonant -> Consonant -> Prop :=
+  | JS_assimilate : forall c1 c2 v,
+      is_jhar c1 = true ->
+      is_jhar c2 = true ->
+      consonant_varga c1 = Some v ->
+      consonant_varga c2 = Some v ->
+      jhar_savarna_spec c1 c2 (first_of_varga v)
+  | JS_no_change : forall c1 c2,
+      (is_jhar c1 = false \/ is_jhar c2 = false \/ same_varga c1 c2 = false) ->
+      jhar_savarna_spec c1 c2 c1.
+
+Lemma apply_8_4_65_correct : forall c1 c2 c3,
+  apply_8_4_65 c1 c2 = c3 <-> jhar_savarna_spec c1 c2 c3.
+Proof.
+  intros c1 c2 c3.
+  split.
+  - intro H.
+    unfold apply_8_4_65 in H.
+    destruct (is_jhar c1) eqn:E1.
+    + destruct (is_jhar c2) eqn:E2.
+      * destruct (same_varga c1 c2) eqn:Esame.
+        -- simpl in H.
+           unfold same_varga in Esame.
+           destruct (consonant_varga c1) eqn:Ev1; try discriminate.
+           destruct (consonant_varga c2) eqn:Ev2; try discriminate.
+           destruct v, v0; try discriminate; subst;
+           apply JS_assimilate; auto.
+        -- simpl in H. subst. apply JS_no_change. right. right. exact Esame.
+      * simpl in H. subst. apply JS_no_change. right. left. exact E2.
+    + simpl in H. subst. apply JS_no_change. left. exact E1.
+  - intro H.
+    destruct H as [x y v Hj1 Hj2 Hv1 Hv2 | x y Hdisj].
+    + unfold apply_8_4_65.
+      rewrite Hj1, Hj2. simpl.
+      unfold same_varga. rewrite Hv1, Hv2.
+      destruct v; simpl; reflexivity.
+    + unfold apply_8_4_65.
+      destruct Hdisj as [H1 | [H2 | H3]].
+      * rewrite H1. reflexivity.
+      * destruct (is_jhar x); simpl; try rewrite H2; reflexivity.
+      * destruct (is_jhar x); simpl; destruct (is_jhar y); simpl; try reflexivity.
+        rewrite H3. reflexivity.
+Qed.
+
+Example jhar_ex1 : apply_8_4_65 C_t C_t = C_t.
+Proof. reflexivity. Qed.
+
+Example jhar_ex2 : apply_8_4_65 C_d C_t = C_t.
+Proof. reflexivity. Qed.
+
+Example jhar_ex3 : apply_8_4_65 C_k C_t = C_k.
+Proof. reflexivity. Qed.
+
+(** ** 8.3.24 naś ca viśarjanīyaḥ padānte *)
+(** "Final n [naś] becomes visarjanīya at end of pada."
+    This handles word-final nasal sandhi. *)
+
+Definition final_n_before_khar (c : Consonant) : bool :=
+  is_khar c.
+
+Inductive final_n_sandhi_spec : Consonant -> Phoneme -> Prop :=
+  | FNS_visarga : forall c,
+      is_khar c = true ->
+      final_n_sandhi_spec c Visarga
+  | FNS_unchanged : forall c,
+      is_khar c = false ->
+      final_n_sandhi_spec c (Vyan C_n).
+
+(** ** 8.3.35 śarvabhaktasya upasargasya ca pūrvasyām *)
+(** Visarga before s becomes s (ru-s). *)
+
+Definition visarga_before_s (following : Consonant) : bool :=
+  match following with
+  | C_s => true
+  | _ => false
+  end.
+
+(** ** Combined Extended Consonant Sandhi *)
+
+(** Applies all 8.4 rules in correct order:
+    1. 8.4.63 śaś cho'ṭi (ś → ch before retroflex)
+    2. 8.4.44 śāt (dental → palatal after ś)
+    3. 8.4.60 tor li (t/d → l before l)
+    4. 8.4.40-41 place assimilation
+    5. 8.4.53-55 voicing assimilation
+    6. 8.4.65 jhar savarṇa assimilation *)
+
+Definition apply_extended_consonant_sandhi (c1 c2 : Consonant) : Consonant :=
+  let step1 := apply_8_4_63 c1 c2 in
+  let step2 := apply_8_4_60 step1 c2 in
+  let step3 := apply_place_assimilation step2 c2 in
+  let step4 := apply_voicing_assimilation step3 c2 in
+  let step5 := apply_8_4_65 step4 c2 in
+  step5.
+
+(** Declarative specification for extended consonant sandhi. *)
+
+Inductive extended_consonant_sandhi_spec
+  : Consonant -> Consonant -> Consonant -> Prop :=
+  | ECSS_combined : forall c1 c2 s1 s2 s3 s4 s5,
+      apply_8_4_63 c1 c2 = s1 ->
+      apply_8_4_60 s1 c2 = s2 ->
+      place_assimilation_spec s2 c2 s3 ->
+      voicing_assimilation_spec s3 c2 s4 ->
+      jhar_savarna_spec s4 c2 s5 ->
+      extended_consonant_sandhi_spec c1 c2 s5.
+
+Theorem extended_consonant_sandhi_correct : forall c1 c2 c3,
+  extended_consonant_sandhi_spec c1 c2 c3 <-> apply_extended_consonant_sandhi c1 c2 = c3.
+Proof.
+  intros c1 c2 c3.
+  split.
+  - intro H.
+    destruct H.
+    unfold apply_extended_consonant_sandhi.
+    rewrite H, H0.
+    apply place_assimilation_correct in H1.
+    rewrite H1.
+    apply voicing_assimilation_correct in H2.
+    rewrite H2.
+    apply apply_8_4_65_correct in H3.
+    exact H3.
+  - intro H.
+    unfold apply_extended_consonant_sandhi in H.
+    apply ECSS_combined with
+      (s1 := apply_8_4_63 c1 c2)
+      (s2 := apply_8_4_60 (apply_8_4_63 c1 c2) c2)
+      (s3 := apply_place_assimilation (apply_8_4_60 (apply_8_4_63 c1 c2) c2) c2)
+      (s4 := apply_voicing_assimilation
+               (apply_place_assimilation (apply_8_4_60 (apply_8_4_63 c1 c2) c2) c2) c2).
+    + reflexivity.
+    + reflexivity.
+    + apply place_assimilation_correct. reflexivity.
+    + apply voicing_assimilation_correct. reflexivity.
+    + apply apply_8_4_65_correct. exact H.
+Qed.
+
+(** Examples of extended consonant sandhi. *)
+
+Example ext_cons_sandhi_1 :
+  apply_extended_consonant_sandhi C_t C_c = C_c.
+Proof. reflexivity. Qed.
+
+Example ext_cons_sandhi_2 :
+  apply_extended_consonant_sandhi C_t C_l = C_l.
+Proof. reflexivity. Qed.
+
+Example ext_cons_sandhi_3 :
+  apply_extended_consonant_sandhi C_d C_g = C_d.
+Proof. reflexivity. Qed.
+
+Example ext_cons_sandhi_4 :
+  apply_extended_consonant_sandhi C_t C_g = C_d.
+Proof. reflexivity. Qed.
+
+Example ext_cons_sandhi_5 :
+  apply_extended_consonant_sandhi C_sh C_tt = C_ch.
+Proof. reflexivity. Qed.
+
+(** ** Totality: Extended consonant sandhi always produces a result. *)
+
+Theorem extended_consonant_sandhi_total : forall c1 c2,
+  exists c3, extended_consonant_sandhi_spec c1 c2 c3.
+Proof.
+  intros c1 c2.
+  exists (apply_extended_consonant_sandhi c1 c2).
+  apply extended_consonant_sandhi_correct.
+  reflexivity.
+Qed.
+
+(** * Part XXII-D: Expanded Visarga Sandhi (8.3) *)
+
+(** ** 8.3.15 kharavasānayoḥ visarjanīyaḥ *)
+(** "Before khar or pause, [s becomes] visarjanīya."
+    This is the primary rule for s → ḥ. *)
+
+Definition s_to_visarga_context (following : option Consonant) : bool :=
+  match following with
+  | None => true
+  | Some c => is_khar c
+  end.
+
+Inductive s_to_visarga_spec : option Consonant -> Prop :=
+  | STV_pause : s_to_visarga_spec None
+  | STV_khar : forall c, is_khar_spec c -> s_to_visarga_spec (Some c).
+
+(** ** 8.3.17-21 Special visarga rules *)
+
+(** 8.3.17 bhoḥ bhagoḥ aghoḥ apūrvāsya yo 'śi *)
+(** Visarga of bhoḥ/bhagoḥ/aghoḥ becomes y before a vowel. *)
+
+Inductive special_visarga_to_y : Prop :=
+  | SVY_bho : special_visarga_to_y.
+
+(** ** 8.3.34 visarjanīyasya saḥ *)
+(** "Visarjanīya [becomes] s [before k/kh and p/ph]."
+    More precisely, before certain voiceless stops. *)
+
+Definition visarga_to_s_context (c : Consonant) : bool :=
+  match c with
+  | C_k | C_kh | C_p | C_ph => false
+  | _ => is_khar c
+  end.
+
+Inductive visarga_to_s_spec : Consonant -> Prop :=
+  | VTS_c : visarga_to_s_spec C_c
+  | VTS_ch : visarga_to_s_spec C_ch
+  | VTS_tt : visarga_to_s_spec C_tt
+  | VTS_tth : visarga_to_s_spec C_tth
+  | VTS_t : visarga_to_s_spec C_t
+  | VTS_th : visarga_to_s_spec C_th
+  | VTS_sh : visarga_to_s_spec C_sh
+  | VTS_ss : visarga_to_s_spec C_ss
+  | VTS_s : visarga_to_s_spec C_s.
+
+Lemma visarga_to_s_correct : forall c,
+  visarga_to_s_context c = true <-> visarga_to_s_spec c.
+Proof.
+  intro c; split.
+  - intro H; destruct c; simpl in H; try discriminate; constructor.
+  - intro H; destruct H; reflexivity.
+Qed.
+
+(** ** 8.3.36 visarjanīyasya jihvāmūlīyopadhmānīyau vā *)
+(** "Visarga optionally becomes jihvāmūlīya before k/kh
+    or upadhmānīya before p/ph." *)
+
+Inductive visarga_allophone_extended : Consonant -> list Phoneme -> Prop :=
+  | VAE_jihva_k : visarga_allophone_extended C_k [Jihvamuliya]
+  | VAE_jihva_kh : visarga_allophone_extended C_kh [Jihvamuliya]
+  | VAE_upadh_p : visarga_allophone_extended C_p [Upadhmamiya]
+  | VAE_upadh_ph : visarga_allophone_extended C_ph [Upadhmamiya]
+  | VAE_plain : forall c, visarga_allophone_extended c [Visarga].
+
+(** ** Combined Visarga Sandhi *)
+
+Inductive VisargaSandhiResultExt : Type :=
+  | VSRE_visarga : VisargaSandhiResultExt
+  | VSRE_jihvamuliya : VisargaSandhiResultExt
+  | VSRE_upadhmamiya : VisargaSandhiResultExt
+  | VSRE_s : VisargaSandhiResultExt
+  | VSRE_r : VisargaSandhiResultExt
+  | VSRE_o : VisargaSandhiResultExt
+  | VSRE_deletion : Vowel -> VisargaSandhiResultExt.
+
+Definition apply_visarga_sandhi_ext (prev_vowel : Vowel) (following : Consonant)
+  : VisargaSandhiResultExt :=
+  if is_jhas following then
+    match prev_vowel with
+    | V_a => VSRE_o
+    | V_aa => VSRE_deletion V_aa
+    | _ => VSRE_r
+    end
+  else
+    match following with
+    | C_k | C_kh => VSRE_jihvamuliya
+    | C_p | C_ph => VSRE_upadhmamiya
+    | _ =>
+        if visarga_to_s_context following then VSRE_s
+        else VSRE_visarga
+    end.
+
+Inductive visarga_sandhi_ext_spec
+  : Vowel -> Consonant -> VisargaSandhiResultExt -> Prop :=
+  | VSES_jhas_a : forall c,
+      is_jhas c = true ->
+      visarga_sandhi_ext_spec V_a c VSRE_o
+  | VSES_jhas_aa : forall c,
+      is_jhas c = true ->
+      visarga_sandhi_ext_spec V_aa c (VSRE_deletion V_aa)
+  | VSES_jhas_other : forall v c,
+      is_jhas c = true ->
+      v <> V_a ->
+      v <> V_aa ->
+      visarga_sandhi_ext_spec v c VSRE_r
+  | VSES_jihva_k :
+      visarga_sandhi_ext_spec V_a C_k VSRE_jihvamuliya
+  | VSES_jihva_kh :
+      visarga_sandhi_ext_spec V_a C_kh VSRE_jihvamuliya
+  | VSES_upadh_p :
+      visarga_sandhi_ext_spec V_a C_p VSRE_upadhmamiya
+  | VSES_upadh_ph :
+      visarga_sandhi_ext_spec V_a C_ph VSRE_upadhmamiya
+  | VSES_to_s : forall v c,
+      is_jhas c = false ->
+      c <> C_k -> c <> C_kh -> c <> C_p -> c <> C_ph ->
+      visarga_to_s_spec c ->
+      visarga_sandhi_ext_spec v c VSRE_s
+  | VSES_plain : forall v c,
+      is_jhas c = false ->
+      c <> C_k -> c <> C_kh -> c <> C_p -> c <> C_ph ->
+      visarga_to_s_context c = false ->
+      visarga_sandhi_ext_spec v c VSRE_visarga.
+
+Example visarga_ext_ex1 :
+  apply_visarga_sandhi_ext V_a C_k = VSRE_jihvamuliya.
+Proof. reflexivity. Qed.
+
+Example visarga_ext_ex2 :
+  apply_visarga_sandhi_ext V_a C_p = VSRE_upadhmamiya.
+Proof. reflexivity. Qed.
+
+Example visarga_ext_ex3 :
+  apply_visarga_sandhi_ext V_a C_g = VSRE_o.
+Proof. reflexivity. Qed.
+
+Example visarga_ext_ex4 :
+  apply_visarga_sandhi_ext V_i C_g = VSRE_r.
+Proof. reflexivity. Qed.
+
+Example visarga_ext_ex5 :
+  apply_visarga_sandhi_ext V_a C_c = VSRE_s.
+Proof. reflexivity. Qed.
+
 (** * Part XXIII: Unified External Sandhi *)
 
 (** External sandhi context: what is at the boundary. *)
@@ -3399,18 +4074,29 @@ Definition apply_external_sandhi
     - 6.1.87  ādguṇaḥ
     - 6.1.88  vṛddhir eci
     - 6.1.101 akaḥ savarṇe dīrghaḥ
+    - 6.1.109 eṅaḥ padāntād ati
 
     Visarga Sandhi (8.3):
     - 8.3.15  kharavasānayoḥ visarjanīyaḥ
+    - 8.3.17  bhoḥ bhagoḥ aghoḥ apūrvāsya yo 'śi
     - 8.3.23  mo 'nusvāraḥ
+    - 8.3.24  naś ca viśarjanīyaḥ padānte
     - 8.3.34  visarjanīyasya saḥ
-    - 8.3.36  visarjanīyasya jihvāmūlīyopadhmānīyau
+    - 8.3.35  śarvabhaktasya upasargasya ca pūrvasyām
+    - 8.3.36  visarjanīyasya jihvāmūlīyopadhmānīyau vā
 
     Consonant Sandhi (8.4):
+    - 8.4.2   aṭkupvāṅnumvyavāye 'pi (ṇatva)
     - 8.4.40  stoḥ ścunā ścuḥ
     - 8.4.41  ṣṭunā ṣṭuḥ
+    - 8.4.44  śāt
+    - 8.4.45  yaro 'nunāsike 'nunāsiko vā
     - 8.4.53  jhalāṁ jaś jhaśi
     - 8.4.55  khari ca
+    - 8.4.58  anusvārasya yayi parasavarṇaḥ
+    - 8.4.60  tor li
+    - 8.4.63  śaś cho 'ṭi
+    - 8.4.65  jharo jhari savarṇe
 *)
 
 (** * Part XXV: Final Metatheorems *)
