@@ -23,6 +23,7 @@ Set Implicit Arguments.
 
 (** * Part I: Phoneme Inventory *)
 
+(** V = {a, ā, i, ī, u, ū, ṛ, ṝ, ḷ, e, ai, o, au} — the 13 Sanskrit vowels. *)
 Inductive Vowel : Type :=
   | V_a | V_aa
   | V_i | V_ii
@@ -32,6 +33,7 @@ Inductive Vowel : Type :=
   | V_e | V_ai
   | V_o | V_au.
 
+(** C = {k, kh, g, gh, ṅ, c, ch, j, jh, ñ, ṭ, ṭh, ḍ, ḍh, ṇ, t, th, d, dh, n, p, ph, b, bh, m, y, r, l, v, ś, ṣ, s, h} — the 33 consonants. *)
 Inductive Consonant : Type :=
   | C_k | C_kh | C_g | C_gh | C_ng
   | C_c | C_ch | C_j | C_jh | C_ny
@@ -42,6 +44,7 @@ Inductive Consonant : Type :=
   | C_sh | C_ss | C_s
   | C_h.
 
+(** P = V ⊔ C ⊔ {anusvāra, visarga, jihvāmūlīya, upadhmānīya} — the phoneme universe. *)
 Inductive Phoneme : Type :=
   | Svar : Vowel -> Phoneme
   | Vyan : Consonant -> Phoneme
@@ -50,83 +53,107 @@ Inductive Phoneme : Type :=
   | Jihvamuliya : Phoneme
   | Upadhmamiya : Phoneme.
 
+(** W = P* — a word is a finite sequence of phonemes. *)
 Definition Word := list Phoneme.
 
+(** =_V : V × V → bool — decidable equality on vowels. *)
 Scheme Equality for Vowel.
+(** =_C : C × C → bool — decidable equality on consonants. *)
 Scheme Equality for Consonant.
+(** =_P : P × P → bool — decidable equality on phonemes. *)
 Scheme Equality for Phoneme.
 
 (** * Part II: Śiva Sūtras and Pratyāhāra *)
 
+(** S = V ⊔ C ⊔ ℕ — Śiva Sūtra elements: vowels, consonants, or it-markers. *)
 Inductive SivaSound : Type :=
   | SS_vowel : Vowel -> SivaSound
   | SS_cons : Consonant -> SivaSound
   | SS_it : nat -> SivaSound.
 
+(** Σ₁ = ⟨a, i, u, ṇ⟩ — first sūtra: simple vowels. *)
 Definition siva_sutra_1 : list SivaSound :=
   [SS_vowel V_a; SS_vowel V_i; SS_vowel V_u; SS_it 1].
 
+(** Σ₂ = ⟨ṛ, ḷ, k⟩ — second sūtra: syllabic liquids. *)
 Definition siva_sutra_2 : list SivaSound :=
   [SS_vowel V_r; SS_vowel V_l; SS_it 2].
 
+(** Σ₃ = ⟨e, o, ṅ⟩ — third sūtra: guṇa diphthongs. *)
 Definition siva_sutra_3 : list SivaSound :=
   [SS_vowel V_e; SS_vowel V_o; SS_it 3].
 
+(** Σ₄ = ⟨ai, au, c⟩ — fourth sūtra: vṛddhi diphthongs. *)
 Definition siva_sutra_4 : list SivaSound :=
   [SS_vowel V_ai; SS_vowel V_au; SS_it 4].
 
+(** Σ₅ = ⟨h, y, v, r, ṭ⟩ — fifth sūtra: h and semivowels. *)
 Definition siva_sutra_5 : list SivaSound :=
   [SS_cons C_h; SS_cons C_y; SS_cons C_v; SS_cons C_r; SS_it 5].
 
+(** Σ₆ = ⟨l, ṇ⟩ — sixth sūtra: lateral. *)
 Definition siva_sutra_6 : list SivaSound :=
   [SS_cons C_l; SS_it 6].
 
+(** Σ₇ = ⟨ñ, m, ṅ, ṇ, n, m⟩ — seventh sūtra: nasals. *)
 Definition siva_sutra_7 : list SivaSound :=
   [SS_cons C_ny; SS_cons C_m; SS_cons C_ng; SS_cons C_nn; SS_cons C_n; SS_it 7].
 
+(** Σ₈ = ⟨jh, bh, ñ⟩ — eighth sūtra: voiced aspirate subset. *)
 Definition siva_sutra_8 : list SivaSound :=
   [SS_cons C_jh; SS_cons C_bh; SS_it 8].
 
+(** Σ₉ = ⟨gh, ḍh, dh, ṣ⟩ — ninth sūtra: voiced aspirates continued. *)
 Definition siva_sutra_9 : list SivaSound :=
   [SS_cons C_gh; SS_cons C_ddh; SS_cons C_dh; SS_it 9].
 
+(** Σ₁₀ = ⟨j, b, g, ḍ, d, ś⟩ — tenth sūtra: voiced unaspirates. *)
 Definition siva_sutra_10 : list SivaSound :=
   [SS_cons C_j; SS_cons C_b; SS_cons C_g; SS_cons C_dd; SS_cons C_d; SS_it 10].
 
+(** Σ₁₁ = ⟨kh, ph, ch, ṭh, th, c, ṭ, t, v⟩ — eleventh sūtra: voiceless stops. *)
 Definition siva_sutra_11 : list SivaSound :=
   [SS_cons C_kh; SS_cons C_ph; SS_cons C_ch; SS_cons C_tth; SS_cons C_th;
    SS_cons C_c; SS_cons C_tt; SS_cons C_t; SS_it 11].
 
+(** Σ₁₂ = ⟨k, p, y⟩ — twelfth sūtra: voiceless velars and labials. *)
 Definition siva_sutra_12 : list SivaSound :=
   [SS_cons C_k; SS_cons C_p; SS_it 12].
 
+(** Σ₁₃ = ⟨ś, ṣ, s, r⟩ — thirteenth sūtra: sibilants. *)
 Definition siva_sutra_13 : list SivaSound :=
   [SS_cons C_sh; SS_cons C_ss; SS_cons C_s; SS_it 13].
 
+(** Σ₁₄ = ⟨h, l⟩ — fourteenth sūtra: glottal. *)
 Definition siva_sutra_14 : list SivaSound :=
   [SS_cons C_h; SS_it 14].
 
+(** Σ = Σ₁ ++ Σ₂ ++ ... ++ Σ₁₄ — the complete Śiva Sūtra sequence. *)
 Definition all_siva_sutras : list SivaSound :=
   siva_sutra_1 ++ siva_sutra_2 ++ siva_sutra_3 ++ siva_sutra_4 ++
   siva_sutra_5 ++ siva_sutra_6 ++ siva_sutra_7 ++ siva_sutra_8 ++
   siva_sutra_9 ++ siva_sutra_10 ++ siva_sutra_11 ++ siva_sutra_12 ++
   siva_sutra_13 ++ siva_sutra_14.
 
+(** it? : S → bool — predicate testing if s is an it-marker. *)
 Definition is_it (s : SivaSound) : bool :=
   match s with SS_it _ => true | _ => false end.
 
+(** =ᵥ : S × V → bool — tests if Śiva sound equals a given vowel. *)
 Definition sound_eq_vowel (s : SivaSound) (v : Vowel) : bool :=
   match s with
   | SS_vowel v' => Vowel_beq v v'
   | _ => false
   end.
 
+(** =_c : S × C → bool — tests if Śiva sound equals a given consonant. *)
 Definition sound_eq_cons (s : SivaSound) (c : Consonant) : bool :=
   match s with
   | SS_cons c' => Consonant_beq c c'
   | _ => false
   end.
 
+(** takeUntilIt : S* → S* — extracts prefix before first it-marker. *)
 Fixpoint take_until_it (ss : list SivaSound) : list SivaSound :=
   match ss with
   | [] => []
@@ -135,6 +162,7 @@ Fixpoint take_until_it (ss : list SivaSound) : list SivaSound :=
       else s :: take_until_it rest
   end.
 
+(** dropV : V × S* → S*? — returns suffix after first occurrence of vowel v. *)
 Fixpoint drop_through_sound_vowel (v : Vowel) (ss : list SivaSound)
   : option (list SivaSound) :=
   match ss with
@@ -144,6 +172,7 @@ Fixpoint drop_through_sound_vowel (v : Vowel) (ss : list SivaSound)
       else drop_through_sound_vowel v rest
   end.
 
+(** dropC : C × S* → S*? — returns suffix after first occurrence of consonant c. *)
 Fixpoint drop_through_sound_cons (c : Consonant) (ss : list SivaSound)
   : option (list SivaSound) :=
   match ss with
@@ -153,6 +182,7 @@ Fixpoint drop_through_sound_cons (c : Consonant) (ss : list SivaSound)
       else drop_through_sound_cons c rest
   end.
 
+(** dropIt : ℕ × S* → S*? — returns suffix after it-marker n. *)
 Fixpoint drop_through_it (n : nat) (ss : list SivaSound)
   : option (list SivaSound) :=
   match ss with
@@ -164,6 +194,7 @@ Fixpoint drop_through_it (n : nat) (ss : list SivaSound)
       end
   end.
 
+(** P_V : V × ℕ → V* — pratyāhāra extraction: {v ∈ V | pos(start) ≤ pos(v) < pos(itₙ)}. *)
 Definition pratyahara_vowels (start : Vowel) (end_it : nat)
   : list Vowel :=
   match drop_through_sound_vowel start all_siva_sutras with
@@ -180,12 +211,12 @@ Definition pratyahara_vowels (start : Vowel) (end_it : nat)
       in segment
   end.
 
+(** ∈_P : V × V × ℕ → bool — tests v ∈ P_V(start, end_it). *)
 Definition in_pratyahara_vowel (v : Vowel) (start : Vowel) (end_it : nat)
   : bool :=
   existsb (Vowel_beq v) (pratyahara_vowels start end_it).
 
-(** Consonant pratyāhāras: analogous extraction for consonants. *)
-
+(** P_C : C × ℕ → C* — pratyāhāra extraction for consonants. *)
 Definition pratyahara_consonants (start : Consonant) (end_it : nat)
   : list Consonant :=
   match drop_through_sound_cons start all_siva_sutras with
@@ -202,33 +233,37 @@ Definition pratyahara_consonants (start : Consonant) (end_it : nat)
       in segment
   end.
 
+(** ∈_PC : C × C × ℕ → bool — tests c ∈ P_C(start, end_it). *)
 Definition in_pratyahara_consonant (c : Consonant) (start : Consonant) (end_it : nat)
   : bool :=
   existsb (Consonant_beq c) (pratyahara_consonants start end_it).
 
-(** Consonant pratyāhāras computed from Śiva Sūtras:
-    - hal (h to l, sūtras 5-14): all consonants
-    - yaṇ (y to ṇ, sūtras 5-6): semivowels y v r l
-    - jhaś (jh to ś, sūtras 8-10): voiced stops
-    - khar (kh to r, sūtras 11-13): voiceless stops + sibilants *)
-
+(** hal = P_C(h, 14) — all consonants. *)
 Definition hal_consonants : list Consonant := pratyahara_consonants C_h 14.
+(** yaṇ = P_C(y, 6) = {y, v, r, l} — semivowels. *)
 Definition yan_consonants : list Consonant := pratyahara_consonants C_y 6.
+(** jhaś = P_C(jh, 10) — voiced stops. *)
 Definition jhas_consonants : list Consonant := pratyahara_consonants C_jh 10.
+(** khar = P_C(kh, 13) — voiceless stops and sibilants. *)
 Definition khar_consonants : list Consonant := pratyahara_consonants C_kh 13.
 
+(** hal? : C → bool — tests c ∈ hal (all consonants). *)
 Definition is_hal_computed (c : Consonant) : bool :=
   in_pratyahara_consonant c C_h 14.
 
+(** yaṇ? : C → bool — tests c ∈ {y, v, r, l}. *)
 Definition is_yan_computed (c : Consonant) : bool :=
   in_pratyahara_consonant c C_y 6.
 
+(** jhaś? : C → bool — tests c ∈ jhaś (voiced stops). *)
 Definition is_jhas_computed (c : Consonant) : bool :=
   in_pratyahara_consonant c C_jh 10.
 
+(** khar? : C → bool — tests c ∈ khar (voiceless stops + sibilants). *)
 Definition is_khar_computed (c : Consonant) : bool :=
   in_pratyahara_consonant c C_kh 13.
 
+(** short : V → V — maps long vowels to short: ā↦a, ī↦i, ū↦u, ṝ↦ṛ. *)
 Definition short_of (v : Vowel) : Vowel :=
   match v with
   | V_aa => V_a
@@ -238,73 +273,87 @@ Definition short_of (v : Vowel) : Vowel :=
   | other => other
   end.
 
+(** ∈_Pₛ : V × V × ℕ → bool — tests short(v) ∈ P_V(start, end_it). *)
 Definition in_pratyahara_with_savarna (v : Vowel) (start : Vowel) (end_it : nat)
   : bool :=
   existsb (Vowel_beq (short_of v)) (pratyahara_vowels start end_it).
 
+(** ik = P_V(i, 2) = {i, u, ṛ, ḷ} — high vowels and syllabic liquids. *)
 Definition ik_vowels : list Vowel := pratyahara_vowels V_i 2.
+(** ak = P_V(a, 2) = {a, i, u, ṛ, ḷ} — simple vowels. *)
 Definition ak_vowels : list Vowel := pratyahara_vowels V_a 2.
+(** ec = P_V(e, 4) = {e, o, ai, au} — diphthongs. *)
 Definition ec_vowels : list Vowel := pratyahara_vowels V_e 4.
+(** ac = P_V(a, 4) = V — all vowels. *)
 Definition ac_vowels : list Vowel := pratyahara_vowels V_a 4.
+(** aṇ = P_V(a, 1) = {a, i, u} — short simple vowels. *)
 Definition an_vowels : list Vowel := pratyahara_vowels V_a 1.
+(** eṅ = P_V(e, 3) = {e, o} — guṇa diphthongs. *)
 Definition en_vowels : list Vowel := pratyahara_vowels V_e 3.
 
+(** ik? : V → bool — tests v ∈ ik (with savarṇa). *)
 Definition is_ik_computed (v : Vowel) : bool :=
   in_pratyahara_with_savarna v V_i 2.
 
+(** ak? : V → bool — tests v ∈ ak (with savarṇa). *)
 Definition is_ak_computed (v : Vowel) : bool :=
   in_pratyahara_with_savarna v V_a 2.
 
+(** ec? : V → bool — tests v ∈ ec (with savarṇa). *)
 Definition is_ec_computed (v : Vowel) : bool :=
   in_pratyahara_with_savarna v V_e 4.
 
+(** ac? : V → bool — tests v ∈ ac (all vowels, with savarṇa). *)
 Definition is_ac_computed (v : Vowel) : bool :=
   in_pratyahara_with_savarna v V_a 4.
 
+(** aṇ? : V → bool — tests v ∈ aṇ (with savarṇa). *)
 Definition is_an_computed (v : Vowel) : bool :=
   in_pratyahara_with_savarna v V_a 1.
 
+(** eṅ? : V → bool — tests v ∈ {e, o}. *)
 Definition is_en_computed (v : Vowel) : bool :=
   in_pratyahara_vowel v V_e 3.
 
-(** Pratyāhāra specifications derived from Śiva Sūtras. *)
-
-(** Structural verification: the computed pratyāhāras yield the expected lists.
-    These lemmas verify that pratyahara_vowels correctly extracts vowels
-    from the Śiva Sūtra encoding according to the traditional algorithm:
-    start from a sound, collect all sounds until the it-marker. *)
-
+(** ik = [i, u, ṛ, ḷ] — verification of pratyāhāra computation. *)
 Lemma ik_vowels_structure : ik_vowels = [V_i; V_u; V_r; V_l].
 Proof. reflexivity. Qed.
 
+(** ak = [a, i, u, ṛ, ḷ] — verification of pratyāhāra computation. *)
 Lemma ak_vowels_structure : ak_vowels = [V_a; V_i; V_u; V_r; V_l].
 Proof. reflexivity. Qed.
 
+(** ec = [e, o, ai, au] — verification of pratyāhāra computation. *)
 Lemma ec_vowels_structure : ec_vowels = [V_e; V_o; V_ai; V_au].
 Proof. reflexivity. Qed.
 
+(** ac = [a, i, u, ṛ, ḷ, e, o, ai, au] — all vowels. *)
 Lemma ac_vowels_structure : ac_vowels = [V_a; V_i; V_u; V_r; V_l; V_e; V_o; V_ai; V_au].
 Proof. reflexivity. Qed.
 
+(** aṇ = [a, i, u] — short simple vowels. *)
 Lemma an_vowels_structure : an_vowels = [V_a; V_i; V_u].
 Proof. reflexivity. Qed.
 
+(** eṅ = [e, o] — guṇa diphthongs only. *)
 Lemma en_vowels_structure : en_vowels = [V_e; V_o].
 Proof. reflexivity. Qed.
 
-(** Structural verification for consonant pratyāhāras. *)
-
+(** yaṇ = [y, v, r, l] — semivowel class. *)
 Lemma yan_consonants_structure : yan_consonants = [C_y; C_v; C_r; C_l].
 Proof. reflexivity. Qed.
 
+(** jhaś = [jh, bh, gh, ḍh, dh, j, b, g, ḍ, d] — voiced stops. *)
 Lemma jhas_consonants_structure : jhas_consonants =
   [C_jh; C_bh; C_gh; C_ddh; C_dh; C_j; C_b; C_g; C_dd; C_d].
 Proof. reflexivity. Qed.
 
+(** khar = [kh, ph, ch, ṭh, th, c, ṭ, t, k, p, ś, ṣ, s] — voiceless obstruents. *)
 Lemma khar_consonants_structure : khar_consonants =
   [C_kh; C_ph; C_ch; C_tth; C_th; C_c; C_tt; C_t; C_k; C_p; C_sh; C_ss; C_s].
 Proof. reflexivity. Qed.
 
+(** hal = C — all 33 consonants. *)
 Lemma hal_consonants_structure : hal_consonants =
   [C_h; C_y; C_v; C_r; C_l; C_ny; C_m; C_ng; C_nn; C_n;
    C_jh; C_bh; C_gh; C_ddh; C_dh; C_j; C_b; C_g; C_dd; C_d;
@@ -312,28 +361,30 @@ Lemma hal_consonants_structure : hal_consonants =
    C_sh; C_ss; C_s; C_h].
 Proof. reflexivity. Qed.
 
-(** jhal = jh to l (sūtras 8-14): voiced stops + voiceless stops + sibilants + h. *)
+(** jhal = P_C(jh, 14) — all obstruents (stops + sibilants + h). *)
 Definition jhal_consonants : list Consonant := pratyahara_consonants C_jh 14.
+(** jhal? : C → bool — tests c ∈ jhal. *)
 Definition is_jhal_computed (c : Consonant) : bool :=
   in_pratyahara_consonant c C_jh 14.
 
+(** jhal = [jh, bh, ..., h] — obstruent class verification. *)
 Lemma jhal_consonants_structure : jhal_consonants =
   [C_jh; C_bh; C_gh; C_ddh; C_dh; C_j; C_b; C_g; C_dd; C_d;
    C_kh; C_ph; C_ch; C_tth; C_th; C_c; C_tt; C_t; C_k; C_p;
    C_sh; C_ss; C_s; C_h].
 Proof. reflexivity. Qed.
 
-(** śal = ś to l (sūtras 13-14): sibilants + h. *)
+(** śal = P_C(ś, 14) = {ś, ṣ, s, h} — sibilants and h. *)
 Definition sal_consonants : list Consonant := pratyahara_consonants C_sh 14.
+(** śal? : C → bool — tests c ∈ {ś, ṣ, s, h}. *)
 Definition is_sal_computed (c : Consonant) : bool :=
   in_pratyahara_consonant c C_sh 14.
 
+(** śal = [ś, ṣ, s, h] — sibilant class verification. *)
 Lemma sal_consonants_structure : sal_consonants = [C_sh; C_ss; C_s; C_h].
 Proof. reflexivity. Qed.
 
-(** The savarṇa extension correctly handles long vowels by mapping them
-    to their short forms before checking membership. *)
-
+(** ∀v. short(short(v)) = short(v) — idempotence of length reduction. *)
 Lemma savarna_short_of_idempotent : forall v,
   short_of (short_of v) = short_of v.
 Proof.
@@ -341,6 +392,7 @@ Proof.
   destruct v; reflexivity.
 Qed.
 
+(** short(v) ∈ ik ⟹ ik?(v) = true — savarṇa extends to long vowels. *)
 Lemma savarna_covers_long : forall v,
   In (short_of v) ik_vowels ->
   is_ik_computed v = true.
@@ -353,7 +405,7 @@ Proof.
   reflexivity.
 Qed.
 
-(** ac = a to c (sūtras 1-4): all vowels. *)
+(** ac_spec ⊆ V — declarative specification of all-vowels class. *)
 Inductive is_ac_spec : Vowel -> Prop :=
   | AC_a : is_ac_spec V_a   | AC_aa : is_ac_spec V_aa
   | AC_i : is_ac_spec V_i   | AC_ii : is_ac_spec V_ii
@@ -363,16 +415,18 @@ Inductive is_ac_spec : Vowel -> Prop :=
   | AC_e : is_ac_spec V_e   | AC_ai : is_ac_spec V_ai
   | AC_o : is_ac_spec V_o   | AC_au : is_ac_spec V_au.
 
+(** ∀v ∈ V. is_ac_spec(v) — ac contains all vowels. *)
 Lemma is_ac_spec_total : forall v, is_ac_spec v.
 Proof. destruct v; constructor. Qed.
 
-(** ik = i to k (sūtras 1-2): i, u, ṛ, ḷ and long forms. *)
+(** ik_spec = {i, ī, u, ū, ṛ, ṝ, ḷ} — declarative ik specification. *)
 Inductive is_ik_spec : Vowel -> Prop :=
   | IK_i : is_ik_spec V_i   | IK_ii : is_ik_spec V_ii
   | IK_u : is_ik_spec V_u   | IK_uu : is_ik_spec V_uu
   | IK_r : is_ik_spec V_r   | IK_rr : is_ik_spec V_rr
   | IK_l : is_ik_spec V_l.
 
+(** ik?(v) = true ⟺ is_ik_spec(v) — computational/declarative equivalence. *)
 Lemma is_ik_correct : forall v,
   is_ik_computed v = true <-> is_ik_spec v.
 Proof.
@@ -381,7 +435,7 @@ Proof.
   - intro H; destruct H; reflexivity.
 Qed.
 
-(** ak = a to k (sūtras 1-2): a, i, u, ṛ, ḷ and long forms. *)
+(** ak_spec = {a, ā, i, ī, u, ū, ṛ, ṝ, ḷ} — declarative ak specification. *)
 Inductive is_ak_spec : Vowel -> Prop :=
   | AK_a : is_ak_spec V_a   | AK_aa : is_ak_spec V_aa
   | AK_i : is_ak_spec V_i   | AK_ii : is_ak_spec V_ii
@@ -389,6 +443,7 @@ Inductive is_ak_spec : Vowel -> Prop :=
   | AK_r : is_ak_spec V_r   | AK_rr : is_ak_spec V_rr
   | AK_l : is_ak_spec V_l.
 
+(** ak?(v) = true ⟺ is_ak_spec(v) — computational/declarative equivalence. *)
 Lemma is_ak_correct : forall v,
   is_ak_computed v = true <-> is_ak_spec v.
 Proof.
@@ -397,11 +452,12 @@ Proof.
   - intro H; destruct H; reflexivity.
 Qed.
 
-(** ec = e to c (sūtras 3-4): e, o, ai, au. *)
+(** ec_spec = {e, ai, o, au} — declarative ec specification. *)
 Inductive is_ec_spec : Vowel -> Prop :=
   | EC_e : is_ec_spec V_e   | EC_ai : is_ec_spec V_ai
   | EC_o : is_ec_spec V_o   | EC_au : is_ec_spec V_au.
 
+(** ec?(v) = true ⟺ is_ec_spec(v) — computational/declarative equivalence. *)
 Lemma is_ec_correct : forall v,
   is_ec_computed v = true <-> is_ec_spec v.
 Proof.
@@ -410,7 +466,7 @@ Proof.
   - intro H; destruct H; reflexivity.
 Qed.
 
-(** Partition lemma: every vowel is either a-class, ik, or ec. *)
+(** V = {a,ā} ⊔ ik ⊔ ec — vowel trichotomy partition. *)
 Lemma vowel_trichotomy : forall v,
   (v = V_a \/ v = V_aa) \/
   is_ik_spec v \/
@@ -435,21 +491,20 @@ Qed.
 
 (** * Part III: Paribhāṣā Sūtras (Meta-rules) *)
 
-(** ** 1.1.1 vṛddhir ādaic *)
-(** "ā, ai, and au are called vṛddhi."
-    This defines the technical term 'vṛddhi' for these three vowels. *)
-
+(** vṛddhi_spec = {ā, ai, au} — the vṛddhi vowel grades (1.1.1). *)
 Inductive is_vrddhi_vowel_spec : Vowel -> Prop :=
   | Vrddhi_aa : is_vrddhi_vowel_spec V_aa
   | Vrddhi_ai : is_vrddhi_vowel_spec V_ai
   | Vrddhi_au : is_vrddhi_vowel_spec V_au.
 
+(** vṛddhi? : V → bool — tests v ∈ {ā, ai, au}. *)
 Definition is_vrddhi_vowel (v : Vowel) : bool :=
   match v with
   | V_aa | V_ai | V_au => true
   | _ => false
   end.
 
+(** vṛddhi?(v) = true ⟺ is_vrddhi_vowel_spec(v). *)
 Lemma is_vrddhi_vowel_correct : forall v,
   is_vrddhi_vowel v = true <-> is_vrddhi_vowel_spec v.
 Proof.
@@ -464,20 +519,20 @@ Proof.
     destruct H; reflexivity.
 Qed.
 
-(** ** 1.1.2 adeṅ guṇaḥ *)
-(** "a, e, and o are called guṇa." *)
-
+(** guṇa_spec = {a, e, o} — the guṇa vowel grades (1.1.2). *)
 Inductive is_guna_vowel_spec : Vowel -> Prop :=
   | Guna_a : is_guna_vowel_spec V_a
   | Guna_e : is_guna_vowel_spec V_e
   | Guna_o : is_guna_vowel_spec V_o.
 
+(** guṇa? : V → bool — tests v ∈ {a, e, o}. *)
 Definition is_guna_vowel (v : Vowel) : bool :=
   match v with
   | V_a | V_e | V_o => true
   | _ => false
   end.
 
+(** guṇa?(v) = true ⟺ is_guna_vowel_spec(v). *)
 Lemma is_guna_vowel_correct : forall v,
   is_guna_vowel v = true <-> is_guna_vowel_spec v.
 Proof.
@@ -492,22 +547,21 @@ Proof.
     destruct H; reflexivity.
 Qed.
 
-(** ** 1.1.3 iko guṇavṛddhī *)
-(** "Guṇa and vṛddhi are substitutes for ik vowels."
-    ik = i, u, ṛ, ḷ (and long forms). *)
-
+(** guṇa_sub ⊆ V × V — guṇa substitution: i,ī↦e and u,ū↦o (1.1.3). *)
 Inductive guna_substitute_spec : Vowel -> Vowel -> Prop :=
   | GS_i : guna_substitute_spec V_i V_e
   | GS_ii : guna_substitute_spec V_ii V_e
   | GS_u : guna_substitute_spec V_u V_o
   | GS_uu : guna_substitute_spec V_uu V_o.
 
+(** vṛddhi_sub ⊆ V × V — vṛddhi substitution: i,ī↦ai and u,ū↦au (1.1.3). *)
 Inductive vrddhi_substitute_spec : Vowel -> Vowel -> Prop :=
   | VS_i : vrddhi_substitute_spec V_i V_ai
   | VS_ii : vrddhi_substitute_spec V_ii V_ai
   | VS_u : vrddhi_substitute_spec V_u V_au
   | VS_uu : vrddhi_substitute_spec V_uu V_au.
 
+(** guṇa_ik : V → V? — partial guṇa function on ik vowels. *)
 Definition guna_of_ik (v : Vowel) : option Vowel :=
   match v with
   | V_i | V_ii => Some V_e
@@ -515,6 +569,7 @@ Definition guna_of_ik (v : Vowel) : option Vowel :=
   | _ => None
   end.
 
+(** vṛddhi_ik : V → V? — partial vṛddhi function on ik vowels. *)
 Definition vrddhi_of_ik (v : Vowel) : option Vowel :=
   match v with
   | V_i | V_ii => Some V_ai
@@ -522,6 +577,7 @@ Definition vrddhi_of_ik (v : Vowel) : option Vowel :=
   | _ => None
   end.
 
+(** guṇa_ik(v₁) = v₂ ⟺ guṇa_sub(v₁, v₂). *)
 Lemma guna_of_ik_correct : forall v1 v2,
   guna_of_ik v1 = Some v2 <-> guna_substitute_spec v1 v2.
 Proof.
@@ -538,6 +594,7 @@ Proof.
     destruct H; reflexivity.
 Qed.
 
+(** vṛddhi_ik(v₁) = v₂ ⟺ vṛddhi_sub(v₁, v₂). *)
 Lemma vrddhi_of_ik_correct : forall v1 v2,
   vrddhi_of_ik v1 = Some v2 <-> vrddhi_substitute_spec v1 v2.
 Proof.
@@ -554,13 +611,13 @@ Proof.
     destruct H; reflexivity.
 Qed.
 
-(** ṛ/ḷ have compound guṇa/vṛddhi (ar/al, ār/āl). *)
-
+(** guṇa_ṛḷ ⊆ V × P* — compound guṇa for syllabic liquids: ṛ,ṝ↦ar, ḷ↦al. *)
 Inductive guna_r_spec : Vowel -> list Phoneme -> Prop :=
   | GRS_r : guna_r_spec V_r [Svar V_a; Vyan C_r]
   | GRS_rr : guna_r_spec V_rr [Svar V_a; Vyan C_r]
   | GRS_l : guna_r_spec V_l [Svar V_a; Vyan C_l].
 
+(** vṛddhi_ṛḷ ⊆ V × P* — compound vṛddhi for syllabic liquids: ṛ,ṝ↦ār, ḷ↦āl. *)
 Inductive vrddhi_r_spec : Vowel -> list Phoneme -> Prop :=
   | VRS_r : vrddhi_r_spec V_r [Svar V_aa; Vyan C_r]
   | VRS_rr : vrddhi_r_spec V_rr [Svar V_aa; Vyan C_r]
@@ -568,9 +625,11 @@ Inductive vrddhi_r_spec : Vowel -> list Phoneme -> Prop :=
 
 (** * Part IV: Savarṇa (1.1.9) *)
 
+(** [v] = V/≈ — savarṇa equivalence classes: {a,ā}, {i,ī}, {u,ū}, {ṛ,ṝ}, {ḷ}, {e}, {ai}, {o}, {au}. *)
 Inductive SavarnaClass : Type :=
   | SC_a | SC_i | SC_u | SC_r | SC_l | SC_e | SC_ai | SC_o | SC_au.
 
+(** [·] : V → V/≈ — quotient map to savarṇa class. *)
 Definition savarna_class (v : Vowel) : SavarnaClass :=
   match v with
   | V_a | V_aa => SC_a
@@ -584,11 +643,14 @@ Definition savarna_class (v : Vowel) : SavarnaClass :=
   | V_au => SC_au
   end.
 
+(** =_[·] : [V] × [V] → bool — decidable equality on savarṇa classes. *)
 Scheme Equality for SavarnaClass.
 
+(** ≈ : V × V → bool — savarṇa relation: v₁ ≈ v₂ iff [v₁] = [v₂]. *)
 Definition savarna (v1 v2 : Vowel) : bool :=
   SavarnaClass_beq (savarna_class v1) (savarna_class v2).
 
+(** ∀v. v ≈ v — reflexivity of savarṇa. *)
 Lemma savarna_refl : forall v, savarna v v = true.
 Proof.
   intro v.
@@ -596,6 +658,7 @@ Proof.
   destruct v; reflexivity.
 Qed.
 
+(** v₁ ≈ v₂ ⟺ v₂ ≈ v₁ — symmetry of savarṇa. *)
 Lemma savarna_sym : forall v1 v2, savarna v1 v2 = savarna v2 v1.
 Proof.
   intros v1 v2.
@@ -603,10 +666,7 @@ Proof.
   destruct v1, v2; reflexivity.
 Qed.
 
-(** ** 1.1.9 tulyāsyaprayatnaṁ savarṇam *)
-(** "Sounds with same place and effort of articulation are savarṇa."
-    For vowels: a/ā, i/ī, u/ū, ṛ/ṝ are savarṇa pairs. *)
-
+(** ≈_spec ⊆ V × V — declarative savarṇa specification (1.1.9). *)
 Inductive savarna_spec : Vowel -> Vowel -> Prop :=
   | Sav_a_a : savarna_spec V_a V_a
   | Sav_a_aa : savarna_spec V_a V_aa
@@ -630,6 +690,7 @@ Inductive savarna_spec : Vowel -> Vowel -> Prop :=
   | Sav_o_o : savarna_spec V_o V_o
   | Sav_au_au : savarna_spec V_au V_au.
 
+(** v₁ ≈ v₂ = true ⟺ savarna_spec(v₁, v₂). *)
 Lemma savarna_correct : forall v1 v2,
   savarna v1 v2 = true <-> savarna_spec v1 v2.
 Proof.
@@ -643,12 +704,14 @@ Proof.
     destruct H; reflexivity.
 Qed.
 
+(** ∀v. savarna_spec(v, v) — reflexivity in Prop. *)
 Lemma savarna_spec_refl : forall v, savarna_spec v v.
 Proof.
   intro v.
   destruct v; constructor.
 Qed.
 
+(** savarna_spec(v₁, v₂) ⟹ savarna_spec(v₂, v₁) — symmetry in Prop. *)
 Lemma savarna_spec_sym : forall v1 v2,
   savarna_spec v1 v2 -> savarna_spec v2 v1.
 Proof.
@@ -658,6 +721,7 @@ Qed.
 
 (** * Part V: Guṇa and Vṛddhi (1.1.1-2) *)
 
+(** guṇa : V → P⁺ — guṇa grade: a,ā↦a; i,ī↦e; u,ū↦o; ṛ,ṝ↦ar; ḷ↦al. *)
 Definition guna (v : Vowel) : list Phoneme :=
   match v with
   | V_a | V_aa => [Svar V_a]
@@ -671,6 +735,7 @@ Definition guna (v : Vowel) : list Phoneme :=
   | V_au => [Svar V_au]
   end.
 
+(** vṛddhi : V → P⁺ — vṛddhi grade: a,ā↦ā; i,ī↦ai; u,ū↦au; ṛ,ṝ↦ār; ḷ↦āl. *)
 Definition vrddhi (v : Vowel) : list Phoneme :=
   match v with
   | V_a | V_aa => [Svar V_aa]
@@ -684,6 +749,7 @@ Definition vrddhi (v : Vowel) : list Phoneme :=
   | V_au => [Svar V_au]
   end.
 
+(** dīrgha : V → V — lengthening: a↦ā, i↦ī, u↦ū, ṛ↦ṝ; others fixed. *)
 Definition lengthen (v : Vowel) : Vowel :=
   match v with
   | V_a => V_aa
@@ -693,6 +759,7 @@ Definition lengthen (v : Vowel) : Vowel :=
   | other => other
   end.
 
+(** dīrgha_spec ⊆ V × V — declarative lengthening specification. *)
 Inductive lengthen_spec : Vowel -> Vowel -> Prop :=
   | Len_a : lengthen_spec V_a V_aa
   | Len_aa : lengthen_spec V_aa V_aa
@@ -708,6 +775,7 @@ Inductive lengthen_spec : Vowel -> Vowel -> Prop :=
   | Len_o : lengthen_spec V_o V_o
   | Len_au : lengthen_spec V_au V_au.
 
+(** dīrgha(v₁) = v₂ ⟺ lengthen_spec(v₁, v₂). *)
 Lemma lengthen_correct : forall v1 v2,
   lengthen v1 = v2 <-> lengthen_spec v1 v2.
 Proof.
@@ -716,18 +784,11 @@ Proof.
   - intro H; destruct H; reflexivity.
 Qed.
 
+(** a? : V → bool — tests v ∈ {a, ā}. *)
 Definition is_a_class (v : Vowel) : bool :=
   match v with V_a | V_aa => true | _ => false end.
 
-(** ** Exhaustive guṇa specification *)
-
-(** Note on compound forms: The guṇa of ṛ/ṝ is 'ar' and of ḷ is 'al'. These are
-    genuinely two-phoneme sequences (vowel + consonant), not single phonemes.
-    This is linguistically correct per traditional Sanskrit phonology where
-    these syllabic consonants have compound guṇa/vṛddhi forms. The return type
-    list Phoneme accommodates both simple (1 phoneme) and compound (2 phoneme)
-    results uniformly. *)
-
+(** guṇa_spec ⊆ V × P⁺ — exhaustive declarative guṇa specification. *)
 Inductive guna_result_spec : Vowel -> list Phoneme -> Prop :=
   | GR_a : guna_result_spec V_a [Svar V_a]
   | GR_aa : guna_result_spec V_aa [Svar V_a]
@@ -743,6 +804,7 @@ Inductive guna_result_spec : Vowel -> list Phoneme -> Prop :=
   | GR_ai : guna_result_spec V_ai [Svar V_ai]
   | GR_au : guna_result_spec V_au [Svar V_au].
 
+(** guṇa(v) = ps ⟺ guna_result_spec(v, ps). *)
 Lemma guna_correct : forall v ps,
   guna v = ps <-> guna_result_spec v ps.
 Proof.
@@ -752,14 +814,14 @@ Proof.
   - intro H. destruct H; reflexivity.
 Qed.
 
-(** Output length characterization: guṇa produces 1 or 2 phonemes. *)
+(** |guṇa(v)| ∈ {1, 2} — guṇa produces 1 or 2 phonemes. *)
 Lemma guna_length : forall v,
   length (guna v) = 1 \/ length (guna v) = 2.
 Proof.
   intro v; destruct v; simpl; auto.
 Qed.
 
-(** Compound forms are exactly ṛ, ṝ, ḷ. *)
+(** |guṇa(v)| = 2 ⟺ v ∈ {ṛ, ṝ, ḷ} — compound forms characterization. *)
 Lemma guna_compound_iff : forall v,
   length (guna v) = 2 <-> (v = V_r \/ v = V_rr \/ v = V_l).
 Proof.
@@ -768,8 +830,7 @@ Proof.
   - intros [H | [H | H]]; subst; reflexivity.
 Qed.
 
-(** ** Exhaustive vṛddhi specification *)
-
+(** vṛddhi_spec ⊆ V × P⁺ — exhaustive declarative vṛddhi specification. *)
 Inductive vrddhi_result_spec : Vowel -> list Phoneme -> Prop :=
   | VR_a : vrddhi_result_spec V_a [Svar V_aa]
   | VR_aa : vrddhi_result_spec V_aa [Svar V_aa]
@@ -785,6 +846,7 @@ Inductive vrddhi_result_spec : Vowel -> list Phoneme -> Prop :=
   | VR_ai : vrddhi_result_spec V_ai [Svar V_ai]
   | VR_au : vrddhi_result_spec V_au [Svar V_au].
 
+(** vṛddhi(v) = ps ⟺ vrddhi_result_spec(v, ps). *)
 Lemma vrddhi_correct : forall v ps,
   vrddhi v = ps <-> vrddhi_result_spec v ps.
 Proof.
@@ -794,8 +856,7 @@ Proof.
   - intro H. destruct H; reflexivity.
 Qed.
 
-(** ** ṛ/ḷ compound result lemmas *)
-
+(** v ∈ {ṛ, ṝ} ⟹ guṇa(v) = [a, r]. *)
 Lemma guna_r_yields_ar : forall v,
   (v = V_r \/ v = V_rr) ->
   guna v = [Svar V_a; Vyan C_r].
@@ -803,10 +864,12 @@ Proof.
   intros v [H | H]; subst; reflexivity.
 Qed.
 
+(** guṇa(ḷ) = [a, l]. *)
 Lemma guna_l_yields_al :
   guna V_l = [Svar V_a; Vyan C_l].
 Proof. reflexivity. Qed.
 
+(** v ∈ {ṛ, ṝ} ⟹ vṛddhi(v) = [ā, r]. *)
 Lemma vrddhi_r_yields_aar : forall v,
   (v = V_r \/ v = V_rr) ->
   vrddhi v = [Svar V_aa; Vyan C_r].
@@ -814,12 +877,14 @@ Proof.
   intros v [H | H]; subst; reflexivity.
 Qed.
 
+(** vṛddhi(ḷ) = [ā, l]. *)
 Lemma vrddhi_l_yields_aal :
   vrddhi V_l = [Svar V_aa; Vyan C_l].
 Proof. reflexivity. Qed.
 
 (** * Part VI: Yaṇ Correspondence *)
 
+(** yaṇ : V → C? — semivowel of ik vowels: i,ī↦y; u,ū↦v; ṛ,ṝ↦r; ḷ↦l. *)
 Definition yan_of (v : Vowel) : option Consonant :=
   match v with
   | V_i | V_ii => Some C_y
@@ -829,6 +894,7 @@ Definition yan_of (v : Vowel) : option Consonant :=
   | _ => None
   end.
 
+(** v ∈ ik ⟹ ∃c. yaṇ(v) = c — ik vowels have semivowels. *)
 Lemma yan_of_ik : forall v,
   is_ik_computed v = true -> exists c, yan_of v = Some c.
 Proof.
@@ -843,6 +909,7 @@ Proof.
   - exists C_l. reflexivity.
 Qed.
 
+(** yaṇ_spec ⊆ V × C — declarative yaṇ correspondence. *)
 Inductive yan_of_spec : Vowel -> Consonant -> Prop :=
   | YanOf_i : yan_of_spec V_i C_y
   | YanOf_ii : yan_of_spec V_ii C_y
@@ -852,6 +919,7 @@ Inductive yan_of_spec : Vowel -> Consonant -> Prop :=
   | YanOf_rr : yan_of_spec V_rr C_r
   | YanOf_l : yan_of_spec V_l C_l.
 
+(** yaṇ(v) = c ⟺ yan_of_spec(v, c). *)
 Lemma yan_of_correct : forall v c,
   yan_of v = Some c <-> yan_of_spec v c.
 Proof.
@@ -861,6 +929,7 @@ Proof.
   - intro H; destruct H; reflexivity.
 Qed.
 
+(** ayavāyāv : V → P*? — ec decomposition: e↦ay, o↦av, ai↦āy, au↦āv (6.1.78). *)
 Definition ayavayav (v : Vowel) : option (list Phoneme) :=
   match v with
   | V_e => Some [Svar V_a; Vyan C_y]
@@ -870,6 +939,7 @@ Definition ayavayav (v : Vowel) : option (list Phoneme) :=
   | _ => None
   end.
 
+(** v ∈ ec ⟹ ∃ps. ayavāyāv(v) = ps. *)
 Lemma ayavayav_ec : forall v,
   is_ec_computed v = true -> exists ps, ayavayav v = Some ps.
 Proof.
@@ -881,12 +951,14 @@ Proof.
   - exists [Svar V_aa; Vyan C_v]. reflexivity.
 Qed.
 
+(** ayavāyāv_spec ⊆ V × P* — declarative decomposition spec. *)
 Inductive ayavayav_spec : Vowel -> list Phoneme -> Prop :=
   | Ayav_e : ayavayav_spec V_e [Svar V_a; Vyan C_y]
   | Ayav_ai : ayavayav_spec V_ai [Svar V_aa; Vyan C_y]
   | Ayav_o : ayavayav_spec V_o [Svar V_a; Vyan C_v]
   | Ayav_au : ayavayav_spec V_au [Svar V_aa; Vyan C_v].
 
+(** ayavāyāv(v) = ps ⟺ ayavayav_spec(v, ps). *)
 Lemma ayavayav_correct : forall v ps,
   ayavayav v = Some ps <-> ayavayav_spec v ps.
 Proof.
@@ -898,22 +970,26 @@ Qed.
 
 (** * Part VII: Sūtra Numbering and Precedence *)
 
+(** Sūtra = ℕ × ℕ × ℕ — sūtra address as (adhyāya, pāda, sūtra). *)
 Record SutraNum := {
   adhyaya : nat;
   pada : nat;
   sutra : nat
 }.
 
+(** =_S : S × S → bool — decidable sūtra equality. *)
 Definition sutra_eq (s1 s2 : SutraNum) : bool :=
   Nat.eqb (adhyaya s1) (adhyaya s2) &&
   Nat.eqb (pada s1) (pada s2) &&
   Nat.eqb (sutra s1) (sutra s2).
 
+(** <_S ⊆ S × S — lexicographic ordering on sūtra numbers. *)
 Definition sutra_lt (s1 s2 : SutraNum) : Prop :=
   adhyaya s1 < adhyaya s2 \/
   (adhyaya s1 = adhyaya s2 /\ pada s1 < pada s2) \/
   (adhyaya s1 = adhyaya s2 /\ pada s1 = pada s2 /\ sutra s1 < sutra s2).
 
+(** <_S : S × S → bool — computable lexicographic less-than. *)
 Definition sutra_ltb (s1 s2 : SutraNum) : bool :=
   if Nat.ltb (adhyaya s1) (adhyaya s2) then true
   else if Nat.eqb (adhyaya s1) (adhyaya s2) then
@@ -923,6 +999,7 @@ Definition sutra_ltb (s1 s2 : SutraNum) : bool :=
     else false
   else false.
 
+(** A sūtra number is never less than itself. *)
 Lemma sutra_ltb_irrefl : forall s, sutra_ltb s s = false.
 Proof.
   intro s.
@@ -935,6 +1012,7 @@ Proof.
   reflexivity.
 Qed.
 
+(** Sūtra ordering is transitive: if s1 precedes s2 and s2 precedes s3, then s1 precedes s3. *)
 Lemma sutra_ltb_trans : forall s1 s2 s3,
   sutra_ltb s1 s2 = true ->
   sutra_ltb s2 s3 = true ->
@@ -1003,6 +1081,7 @@ Proof.
            lia.
 Qed.
 
+(** The computable ordering matches the declarative ordering specification. *)
 Lemma sutra_ltb_correct : forall s1 s2,
   sutra_ltb s1 s2 = true <-> sutra_lt s1 s2.
 Proof.
@@ -1062,16 +1141,13 @@ Proof.
       exact Hf.
 Qed.
 
-(** ** 1.4.2 vipratiṣedhe paraṁ kāryam *)
-(** "In a conflict, the later rule prevails."
-    When two rules both apply, the one appearing later in the
-    Aṣṭādhyāyī wins. Exception: apavāda defeats utsarga regardless. *)
-
+(** When two rules conflict, the later rule in the text prevails. *)
 Inductive para_defeats_spec : SutraNum -> SutraNum -> Prop :=
   | Para_later : forall s1 s2,
       sutra_lt s1 s2 ->
       para_defeats_spec s2 s1.
 
+(** A rule cannot defeat itself in precedence. *)
 Lemma para_defeats_irrefl : forall s, ~ para_defeats_spec s s.
 Proof.
   intros s H.
@@ -1080,6 +1156,7 @@ Proof.
   destruct H0 as [Hlt | [[Heq Hlt] | [Heq1 [Heq2 Hlt]]]]; lia.
 Qed.
 
+(** Precedence is asymmetric: if s1 defeats s2, then s2 cannot defeat s1. *)
 Lemma para_defeats_asymm : forall s1 s2,
   para_defeats_spec s1 s2 -> ~ para_defeats_spec s2 s1.
 Proof.
@@ -1093,6 +1170,7 @@ Qed.
 
 (** * Part VIII: Rule Representation *)
 
+(** Identifiers for the six vowel sandhi rules formalized from Aṣṭādhyāyī 6.1. *)
 Inductive RuleId : Type :=
   | R_6_1_77
   | R_6_1_78
@@ -1101,32 +1179,24 @@ Inductive RuleId : Type :=
   | R_6_1_101
   | R_6_1_109.
 
+(** Decidable equality for rule identifiers. *)
 Scheme Equality for RuleId.
 
-(** ** Morphological Boundaries *)
-
-(** Sandhi rules in Pāṇini are sensitive to morphological boundaries.
-    - PadaAnta: word boundary (where 6.1.109 pūrvarūpa specifically applies)
-    - DhatuPratyaya: boundary between root and suffix
-    - SamasaAnta: compound boundary
-    - Internal: within a morpheme (sandhi usually doesn't apply)
-    Some rules like 6.1.109 are marked "padāntāt" (from word-final position). *)
-
+(** Types of morphological boundaries where sandhi may or may not apply. *)
 Inductive MorphBoundary : Type :=
   | PadaAnta
   | DhatuPratyaya
   | SamasaAnta
   | Internal.
 
-(** For this formalization, we primarily distinguish pada boundaries (external
-    sandhi) from internal boundaries. Rule 6.1.109 requires pada boundary. *)
-
+(** Tests whether a rule requires word-final position to apply. *)
 Definition requires_pada_boundary (r : RuleId) : bool :=
   match r with
   | R_6_1_109 => true
   | _ => false
   end.
 
+(** Tests whether a morphological boundary permits a given rule to apply. *)
 Definition boundary_allows_rule (b : MorphBoundary) (r : RuleId) : bool :=
   match r with
   | R_6_1_109 =>
@@ -1137,9 +1207,10 @@ Definition boundary_allows_rule (b : MorphBoundary) (r : RuleId) : bool :=
   | _ => true
   end.
 
-(** eṅ = e, o (from Śiva Sūtras 3). Now computed via pratyahara_vowels. *)
+(** Tests whether a vowel is e or o, the guṇa diphthongs. *)
 Definition is_en (v : Vowel) : bool := is_en_computed v.
 
+(** Returns the sūtra number for each rule identifier. *)
 Definition rule_sutra_num (r : RuleId) : SutraNum :=
   match r with
   | R_6_1_77 => {| adhyaya := 6; pada := 1; sutra := 77 |}
@@ -1150,6 +1221,7 @@ Definition rule_sutra_num (r : RuleId) : SutraNum :=
   | R_6_1_109 => {| adhyaya := 6; pada := 1; sutra := 109 |}
   end.
 
+(** Tests whether r1 is an exception rule that overrides r2. *)
 Definition is_apavada (r1 r2 : RuleId) : bool :=
   match r1, r2 with
   | R_6_1_88, R_6_1_87 => true
@@ -1159,6 +1231,7 @@ Definition is_apavada (r1 r2 : RuleId) : bool :=
   | _, _ => false
   end.
 
+(** Tests whether a rule's phonological conditions are satisfied by the vowel pair. *)
 Definition rule_matches (r : RuleId) (v1 v2 : Vowel) : bool :=
   match r with
   | R_6_1_77 => is_ik_computed v1
@@ -1169,21 +1242,23 @@ Definition rule_matches (r : RuleId) (v1 v2 : Vowel) : bool :=
   | R_6_1_109 => is_en v1 && Vowel_beq v2 V_a
   end.
 
-(** Boundary-aware rule matching: checks both phonological and morphological conditions. *)
+(** Tests both phonological conditions and boundary requirements for a rule. *)
 Definition rule_matches_at_boundary (r : RuleId) (v1 v2 : Vowel) (b : MorphBoundary) : bool :=
   rule_matches r v1 v2 && boundary_allows_rule b r.
 
-(** Example: 6.1.109 applies at pada boundary but not internally. *)
+(** Rule 6.1.109 applies at word boundaries. *)
 Example boundary_109_pada : rule_matches_at_boundary R_6_1_109 V_e V_a PadaAnta = true.
 Proof. reflexivity. Qed.
 
+(** Rule 6.1.109 does not apply word-internally. *)
 Example boundary_109_internal : rule_matches_at_boundary R_6_1_109 V_e V_a Internal = false.
 Proof. reflexivity. Qed.
 
-(** Other rules apply at all boundaries. *)
+(** Most rules apply regardless of boundary type. *)
 Example boundary_87_internal : rule_matches_at_boundary R_6_1_87 V_a V_i Internal = true.
 Proof. reflexivity. Qed.
 
+(** Computes the phoneme sequence that results from applying a rule to a vowel pair. *)
 Definition apply_rule (r : RuleId) (v1 v2 : Vowel) : list Phoneme :=
   match r with
   | R_6_1_77 =>
@@ -1204,11 +1279,13 @@ Definition apply_rule (r : RuleId) (v1 v2 : Vowel) : list Phoneme :=
 
 (** * Part IX: Precedence - vipratiṣedhe paraṁ kāryam *)
 
+(** Tests whether r1 defeats r2, either by being an exception or by appearing later. *)
 Definition rule_defeats (r1 r2 : RuleId) : bool :=
   is_apavada r1 r2 ||
   (negb (is_apavada r2 r1) &&
    sutra_ltb (rule_sutra_num r2) (rule_sutra_num r1)).
 
+(** No rule defeats itself in precedence. *)
 Lemma rule_defeats_irrefl : forall r, rule_defeats r r = false.
 Proof.
   intro r.
@@ -1233,9 +1310,11 @@ Qed.
     The tournament-based selection (find_winner) automatically handles new rules
     as long as defeat_total holds for the extended rule set. *)
 
+(** The complete list of sandhi rules in this formalization. *)
 Definition all_rules : list RuleId :=
   [R_6_1_77; R_6_1_78; R_6_1_87; R_6_1_88; R_6_1_101; R_6_1_109].
 
+(** Filters the rule list to those whose conditions are satisfied by a vowel pair. *)
 Fixpoint matching_rules (rules : list RuleId) (v1 v2 : Vowel)
   : list RuleId :=
   match rules with
@@ -1246,6 +1325,7 @@ Fixpoint matching_rules (rules : list RuleId) (v1 v2 : Vowel)
       else matching_rules rs v1 v2
   end.
 
+(** Tournament-style selection that eliminates rules pairwise based on precedence. *)
 Fixpoint find_winner_aux (fuel : nat) (candidates : list RuleId)
   : option RuleId :=
   match fuel with
@@ -1260,11 +1340,11 @@ Fixpoint find_winner_aux (fuel : nat) (candidates : list RuleId)
       end
   end.
 
+(** Finds the winning rule among candidates using tournament selection. *)
 Definition find_winner (candidates : list RuleId) : option RuleId :=
   find_winner_aux (List.length candidates) candidates.
 
-(** Fuel sufficiency: prove that length-based fuel never runs out prematurely. *)
-
+(** The fuel parameter is always sufficient to complete the tournament. *)
 Lemma find_winner_aux_fuel_sufficient : forall fuel candidates,
   fuel >= length candidates ->
   candidates <> [] ->
@@ -1290,6 +1370,7 @@ Proof.
            ++ discriminate.
 Qed.
 
+(** A non-empty candidate list always yields a winner. *)
 Lemma find_winner_sufficient : forall candidates,
   candidates <> [] ->
   exists r, find_winner candidates = Some r.
@@ -1301,11 +1382,13 @@ Proof.
   - exact Hne.
 Qed.
 
+(** Selects the winning rule for a vowel pair from all applicable rules. *)
 Definition select_rule (v1 v2 : Vowel) : option RuleId :=
   find_winner (matching_rules all_rules v1 v2).
 
 (** * Part X: Declarative Specification *)
 
+(** Declarative specification of when each sandhi rule applies to a vowel pair. *)
 Inductive sandhi_applicable : RuleId -> Vowel -> Vowel -> Prop :=
   | SA_77 : forall v1 v2,
       is_ik_computed v1 = true ->
@@ -1330,6 +1413,7 @@ Inductive sandhi_applicable : RuleId -> Vowel -> Vowel -> Prop :=
       v2 = V_a ->
       sandhi_applicable R_6_1_109 v1 v2.
 
+(** The computable rule_matches function agrees with the declarative specification. *)
 Lemma rule_matches_iff_applicable : forall r v1 v2,
   rule_matches r v1 v2 = true <-> sandhi_applicable r v1 v2.
 Proof.
@@ -1363,6 +1447,7 @@ Proof.
     + rewrite H. subst v2. reflexivity.
 Qed.
 
+(** Declarative specification of when one rule defeats another in precedence. *)
 Inductive defeats_rel : RuleId -> RuleId -> Prop :=
   | Defeats_apavada : forall r1 r2,
       is_apavada r1 r2 = true ->
@@ -1373,6 +1458,7 @@ Inductive defeats_rel : RuleId -> RuleId -> Prop :=
       sutra_lt (rule_sutra_num r2) (rule_sutra_num r1) ->
       defeats_rel r1 r2.
 
+(** The computable defeat test agrees with the declarative specification. *)
 Lemma rule_defeats_correct : forall r1 r2,
   rule_defeats r1 r2 = true <-> defeats_rel r1 r2.
 Proof.
@@ -1407,19 +1493,7 @@ Proof.
          exact Hlt.
 Qed.
 
-(** ** Independent Rule Output Specification *)
-
-(** This specification defines rule outputs declaratively without referencing
-    the computational apply_rule function. Each constructor corresponds to a
-    sūtra and defines its output using the independent linguistic specifications
-    (yan_of_spec, ayavayav_spec, guna_result_spec, vrddhi_result_spec, lengthen_spec).
-
-    Design note: The exhaustive enumeration in specs like guna_result_spec may
-    appear redundant with the computational functions. However, this separation
-    is essential: the specs define outputs via linguistic primitives (e.g., "guṇa
-    of i is e"), while functions implement computation. The soundness theorem
-    proves these coincide, making the proof non-circular. *)
-
+(** Declarative specification of each rule's output, independent of computation. *)
 Inductive rule_output_spec : RuleId -> Vowel -> Vowel -> list Phoneme -> Prop :=
   | ROS_77 : forall v1 v2 c,
       (** 6.1.77 iko yaṇ aci: ik vowel becomes its corresponding yaṇ semivowel. *)
@@ -1445,8 +1519,7 @@ Inductive rule_output_spec : RuleId -> Vowel -> Vowel -> list Phoneme -> Prop :=
       (** 6.1.109 eṅaḥ padāntādati: eṅ + a → eṅ (pūrvarūpa). *)
       rule_output_spec R_6_1_109 v1 v2 [Svar v1].
 
-(** Proof that apply_rule matches the independent specification. *)
-
+(** The computational apply_rule matches the declarative output specification. *)
 Lemma apply_rule_correct : forall r v1 v2 out,
   rule_matches r v1 v2 = true ->
   apply_rule r v1 v2 = out <-> rule_output_spec r v1 v2 out.
@@ -1475,16 +1548,14 @@ Proof.
     + simpl. reflexivity.
 Qed.
 
+(** Specifies that a rule is the winner: it applies and defeats all other applicable rules. *)
 Inductive sandhi_winner : RuleId -> Vowel -> Vowel -> Prop :=
   | SW_wins : forall r v1 v2,
       sandhi_applicable r v1 v2 ->
       (forall r', sandhi_applicable r' v1 v2 -> r' <> r -> defeats_rel r r') ->
       sandhi_winner r v1 v2.
 
-(** The ac_sandhi_rel now uses the independent rule_output_spec, making the
-    soundness/completeness theorem non-circular. The specification defines
-    outputs via linguistic rules, not via the computational function. *)
-
+(** The complete declarative sandhi relation: either a winner applies or identity. *)
 Inductive ac_sandhi_rel : Vowel -> Vowel -> list Phoneme -> Prop :=
   | ASR_result : forall v1 v2 r out,
       sandhi_winner r v1 v2 ->
@@ -1494,20 +1565,16 @@ Inductive ac_sandhi_rel : Vowel -> Vowel -> list Phoneme -> Prop :=
       (forall r, ~ sandhi_applicable r v1 v2) ->
       ac_sandhi_rel v1 v2 [Svar v1; Svar v2].
 
-(** Note: ASR_identity is never actually used in practice because coverage_semantic
-    proves that some rule always applies for any vowel pair. However, including it
-    makes the specification more robust and explicit about the identity fallback. *)
-
 (** * Part XI: Computational Sandhi Function *)
 
+(** The main sandhi function: selects the winning rule and applies it. *)
 Definition apply_ac_sandhi (v1 v2 : Vowel) : list Phoneme :=
   match select_rule v1 v2 with
   | Some r => apply_rule r v1 v2
   | None => [Svar v1; Svar v2]
   end.
 
-(** ** Rule 6.1.87 compound results for ṛ/ḷ *)
-
+(** Rule 6.1.87 applied to a/ā + ṛ yields the compound guṇa ar. *)
 Lemma rule_87_r_result : forall v1,
   is_a_class v1 = true ->
   apply_rule R_6_1_87 v1 V_r = [Svar V_a; Vyan C_r].
@@ -1516,6 +1583,7 @@ Proof.
   destruct v1; simpl in H; try discriminate; reflexivity.
 Qed.
 
+(** Rule 6.1.87 applied to a/ā + ṝ yields the compound guṇa ar. *)
 Lemma rule_87_rr_result : forall v1,
   is_a_class v1 = true ->
   apply_rule R_6_1_87 v1 V_rr = [Svar V_a; Vyan C_r].
@@ -1524,6 +1592,7 @@ Proof.
   destruct v1; simpl in H; try discriminate; reflexivity.
 Qed.
 
+(** Rule 6.1.87 applied to a/ā + ḷ yields the compound guṇa al. *)
 Lemma rule_87_l_result : forall v1,
   is_a_class v1 = true ->
   apply_rule R_6_1_87 v1 V_l = [Svar V_a; Vyan C_l].
@@ -1532,45 +1601,51 @@ Proof.
   destruct v1; simpl in H; try discriminate; reflexivity.
 Qed.
 
-(** ṛ/ḷ are not in ec, so 6.1.88 does not apply to them directly. *)
-
+(** The vowel ṛ is not a diphthong and is not in the ec class. *)
 Lemma r_not_ec : is_ec_computed V_r = false.
 Proof. reflexivity. Qed.
 
+(** The vowel ṝ is not a diphthong and is not in the ec class. *)
 Lemma rr_not_ec : is_ec_computed V_rr = false.
 Proof. reflexivity. Qed.
 
+(** The vowel ḷ is not a diphthong and is not in the ec class. *)
 Lemma l_not_ec : is_ec_computed V_l = false.
 Proof. reflexivity. Qed.
 
-(** ** Sandhi results for ṛ/ḷ cases *)
-
+(** Sandhi of a + ṛ produces the compound guṇa ar. *)
 Lemma a_r_sandhi_is_ar :
   apply_ac_sandhi V_a V_r = [Svar V_a; Vyan C_r].
 Proof. reflexivity. Qed.
 
+(** Sandhi of ā + ṛ produces the compound guṇa ar. *)
 Lemma aa_r_sandhi_is_ar :
   apply_ac_sandhi V_aa V_r = [Svar V_a; Vyan C_r].
 Proof. reflexivity. Qed.
 
+(** Sandhi of a + ṝ produces the compound guṇa ar. *)
 Lemma a_rr_sandhi_is_ar :
   apply_ac_sandhi V_a V_rr = [Svar V_a; Vyan C_r].
 Proof. reflexivity. Qed.
 
+(** Sandhi of a + ḷ produces the compound guṇa al. *)
 Lemma a_l_sandhi_is_al :
   apply_ac_sandhi V_a V_l = [Svar V_a; Vyan C_l].
 Proof. reflexivity. Qed.
 
+(** Sandhi of ṛ + a produces r followed by a via yaṇ rule. *)
 Lemma r_a_sandhi_is_ra :
   apply_ac_sandhi V_r V_a = [Vyan C_r; Svar V_a].
 Proof. reflexivity. Qed.
 
+(** Sandhi of ḷ + a produces l followed by a via yaṇ rule. *)
 Lemma l_a_sandhi_is_la :
   apply_ac_sandhi V_l V_a = [Vyan C_l; Svar V_a].
 Proof. reflexivity. Qed.
 
 (** * Part XII: Key Conflict Cases *)
 
+(** Both yaṇ and dīrgha rules match for i + i. *)
 Lemma conflict_i_i_both_match :
   rule_matches R_6_1_77 V_i V_i = true /\
   rule_matches R_6_1_101 V_i V_i = true.
@@ -1578,12 +1653,14 @@ Proof.
   split; reflexivity.
 Qed.
 
+(** In the i + i conflict, dīrgha rule 6.1.101 wins over yaṇ 6.1.77. *)
 Lemma conflict_i_i_101_wins :
   rule_defeats R_6_1_101 R_6_1_77 = true.
 Proof.
   reflexivity.
 Qed.
 
+(** Both guṇa and vṛddhi rules match for a + e. *)
 Lemma conflict_a_e_both_match :
   rule_matches R_6_1_87 V_a V_e = true /\
   rule_matches R_6_1_88 V_a V_e = true.
@@ -1591,12 +1668,14 @@ Proof.
   split; reflexivity.
 Qed.
 
+(** In the a + e conflict, vṛddhi 6.1.88 wins over guṇa 6.1.87. *)
 Lemma conflict_a_e_88_wins :
   rule_defeats R_6_1_88 R_6_1_87 = true.
 Proof.
   reflexivity.
 Qed.
 
+(** Both guṇa and dīrgha rules match for a + a. *)
 Lemma conflict_a_a_both_match :
   rule_matches R_6_1_87 V_a V_a = true /\
   rule_matches R_6_1_101 V_a V_a = true.
@@ -1604,6 +1683,7 @@ Proof.
   split; reflexivity.
 Qed.
 
+(** In the a + a conflict, dīrgha 6.1.101 wins over guṇa 6.1.87. *)
 Lemma conflict_a_a_101_wins :
   rule_defeats R_6_1_101 R_6_1_87 = true.
 Proof.
@@ -1612,6 +1692,7 @@ Qed.
 
 (** * Part XIII: Coverage Theorem (Semantic) *)
 
+(** Every vowel belongs to exactly one of the three classes: a-class, ik, or ec. *)
 Lemma vowel_classification : forall v,
   is_a_class v = true \/
   is_ik_computed v = true \/
@@ -1634,6 +1715,7 @@ Proof.
   - right. right. reflexivity.
 Qed.
 
+(** For any vowel pair, at least one sandhi rule is applicable. *)
 Theorem coverage_semantic : forall v1 v2,
   exists r, sandhi_applicable r v1 v2.
 Proof.
@@ -1650,8 +1732,7 @@ Proof.
     exact Hec.
 Qed.
 
-(** Semantic proof that matching_rules is never empty. *)
-
+(** Unfolding lemma for matching_rules on a cons list. *)
 Lemma matching_rules_cons : forall r rs v1 v2,
   matching_rules (r :: rs) v1 v2 =
   if rule_matches r v1 v2
@@ -1661,6 +1742,7 @@ Proof.
   intros. reflexivity.
 Qed.
 
+(** If a rule matches and is in the list, it appears in matching_rules. *)
 Lemma matching_rules_In : forall r rules v1 v2,
   In r rules ->
   rule_matches r v1 v2 = true ->
@@ -1679,12 +1761,14 @@ Proof.
       * apply IH. exact Hin'.
 Qed.
 
+(** Every rule identifier appears in all_rules. *)
 Lemma all_rules_complete : forall r, In r all_rules.
 Proof.
   intro r.
   destruct r; unfold all_rules; simpl; auto 10.
 Qed.
 
+(** The matching rules list is never empty for any vowel pair. *)
 Lemma matching_rules_nonempty : forall v1 v2,
   matching_rules all_rules v1 v2 <> [].
 Proof.
@@ -1697,8 +1781,7 @@ Proof.
   destruct Hmr.
 Qed.
 
-(** Coverage derived semantically via find_winner_sufficient. *)
-
+(** The select_rule function always finds a rule for any vowel pair. *)
 Theorem coverage_computational : forall v1 v2,
   exists r, select_rule v1 v2 = Some r.
 Proof.
@@ -1710,199 +1793,205 @@ Qed.
 
 (** * Part XIV: Correctness Examples *)
 
-(** These examples verify the sandhi function against traditional results.
-    Note the distinction:
-    - a + ṛ → ar (guṇa of ṛ via 6.1.87, compound result)
-    - ṛ + a → ra (yaṇ sandhi via 6.1.77)
-    The guṇa/vṛddhi functions produce compound phoneme sequences for ṛ/ḷ:
-    - guṇa of ṛ = ar [Svar V_a; Vyan C_r]
-    - vṛddhi of ṛ = ār [Svar V_aa; Vyan C_r]
-    - guṇa of ḷ = al [Svar V_a; Vyan C_l] *)
-
+(** a + a merges to long ā via savarṇa dīrgha. *)
 Example ex_a_a : apply_ac_sandhi V_a V_a = [Svar V_aa].
 Proof. reflexivity. Qed.
 
+(** a + i yields guṇa e. *)
 Example ex_a_i : apply_ac_sandhi V_a V_i = [Svar V_e].
 Proof. reflexivity. Qed.
 
+(** a + u yields guṇa o. *)
 Example ex_a_u : apply_ac_sandhi V_a V_u = [Svar V_o].
 Proof. reflexivity. Qed.
 
+(** a + e yields vṛddhi ai. *)
 Example ex_a_e : apply_ac_sandhi V_a V_e = [Svar V_ai].
 Proof. reflexivity. Qed.
 
+(** a + o yields vṛddhi au. *)
 Example ex_a_o : apply_ac_sandhi V_a V_o = [Svar V_au].
 Proof. reflexivity. Qed.
 
+(** i + a becomes y + a via yaṇ. *)
 Example ex_i_a : apply_ac_sandhi V_i V_a = [Vyan C_y; Svar V_a].
 Proof. reflexivity. Qed.
 
+(** i + i merges to long ī via savarṇa dīrgha. *)
 Example ex_i_i : apply_ac_sandhi V_i V_i = [Svar V_ii].
 Proof. reflexivity. Qed.
 
+(** i + u becomes y + u via yaṇ. *)
 Example ex_i_u : apply_ac_sandhi V_i V_u = [Vyan C_y; Svar V_u].
 Proof. reflexivity. Qed.
 
+(** u + a becomes v + a via yaṇ. *)
 Example ex_u_a : apply_ac_sandhi V_u V_a = [Vyan C_v; Svar V_a].
 Proof. reflexivity. Qed.
 
+(** u + u merges to long ū via savarṇa dīrgha. *)
 Example ex_u_u : apply_ac_sandhi V_u V_u = [Svar V_uu].
 Proof. reflexivity. Qed.
 
+(** e + a yields e via pūrvarūpa. *)
 Example ex_e_a : apply_ac_sandhi V_e V_a = [Svar V_e].
 Proof. reflexivity. Qed.
 
+(** ai + a decomposes to āy + a via ayavāyāv. *)
 Example ex_ai_a : apply_ac_sandhi V_ai V_a = [Svar V_aa; Vyan C_y; Svar V_a].
 Proof. reflexivity. Qed.
 
+(** o + a yields o via pūrvarūpa. *)
 Example ex_o_a : apply_ac_sandhi V_o V_a = [Svar V_o].
 Proof. reflexivity. Qed.
 
+(** au + a decomposes to āv + a via ayavāyāv. *)
 Example ex_au_a : apply_ac_sandhi V_au V_a = [Svar V_aa; Vyan C_v; Svar V_a].
 Proof. reflexivity. Qed.
 
+(** ṛ + a becomes r + a via yaṇ. *)
 Example ex_r_a : apply_ac_sandhi V_r V_a = [Vyan C_r; Svar V_a].
 Proof. reflexivity. Qed.
 
+(** ṛ + ṛ merges to long ṝ via savarṇa dīrgha. *)
 Example ex_r_r : apply_ac_sandhi V_r V_r = [Svar V_rr].
 Proof. reflexivity. Qed.
 
+(** a + ṛ yields compound guṇa ar. *)
 Example ex_a_r : apply_ac_sandhi V_a V_r = [Svar V_a; Vyan C_r].
 Proof. reflexivity. Qed.
 
-(** ** Counterexamples: verifying rules do NOT apply in wrong contexts *)
-
-(** 6.1.77 (yaṇ) requires ik vowel - a/ā/e/o/ai/au should NOT trigger it. *)
+(** The yaṇ rule does not apply when the first vowel is a. *)
 Lemma counterex_77_a_not_ik : rule_matches R_6_1_77 V_a V_i = false.
 Proof. reflexivity. Qed.
 
+(** The yaṇ rule does not apply when the first vowel is e. *)
 Lemma counterex_77_e_not_ik : rule_matches R_6_1_77 V_e V_a = false.
 Proof. reflexivity. Qed.
 
+(** The yaṇ rule does not apply when the first vowel is o. *)
 Lemma counterex_77_o_not_ik : rule_matches R_6_1_77 V_o V_a = false.
 Proof. reflexivity. Qed.
 
-(** 6.1.78 (ayavāyāv) requires ec vowel - a/ā/i/ī/u/ū/ṛ/ḷ should NOT trigger it. *)
+(** The ayavāyāv rule does not apply when the first vowel is a. *)
 Lemma counterex_78_a_not_ec : rule_matches R_6_1_78 V_a V_i = false.
 Proof. reflexivity. Qed.
 
+(** The ayavāyāv rule does not apply when the first vowel is i. *)
 Lemma counterex_78_i_not_ec : rule_matches R_6_1_78 V_i V_a = false.
 Proof. reflexivity. Qed.
 
+(** The ayavāyāv rule does not apply when the first vowel is u. *)
 Lemma counterex_78_u_not_ec : rule_matches R_6_1_78 V_u V_a = false.
 Proof. reflexivity. Qed.
 
-(** 6.1.87 (guṇa) requires a-class first vowel - i/u/e/o should NOT trigger it. *)
+(** The guṇa rule does not apply when the first vowel is i. *)
 Lemma counterex_87_i_not_a_class : rule_matches R_6_1_87 V_i V_a = false.
 Proof. reflexivity. Qed.
 
+(** The guṇa rule does not apply when the first vowel is e. *)
 Lemma counterex_87_e_not_a_class : rule_matches R_6_1_87 V_e V_a = false.
 Proof. reflexivity. Qed.
 
-(** 6.1.88 (vṛddhi) requires a-class + ec - wrong combinations should NOT trigger. *)
+(** The vṛddhi rule does not apply when the second vowel is i. *)
 Lemma counterex_88_a_i_not_ec : rule_matches R_6_1_88 V_a V_i = false.
 Proof. reflexivity. Qed.
 
+(** The vṛddhi rule does not apply when the first vowel is i. *)
 Lemma counterex_88_i_e_not_a_class : rule_matches R_6_1_88 V_i V_e = false.
 Proof. reflexivity. Qed.
 
-(** 6.1.101 (dīrgha) requires savarṇa ak - non-savarṇa should NOT trigger. *)
+(** The dīrgha rule does not apply to non-savarṇa pairs like a + i. *)
 Lemma counterex_101_a_i_not_savarna : rule_matches R_6_1_101 V_a V_i = false.
 Proof. reflexivity. Qed.
 
+(** The dīrgha rule does not apply to non-savarṇa pairs like i + u. *)
 Lemma counterex_101_i_u_not_savarna : rule_matches R_6_1_101 V_i V_u = false.
 Proof. reflexivity. Qed.
 
+(** The dīrgha rule does not apply to diphthongs like e + e. *)
 Lemma counterex_101_e_e_not_ak : rule_matches R_6_1_101 V_e V_e = false.
 Proof. reflexivity. Qed.
 
-(** 6.1.109 (pūrvarūpa) requires eṅ + a - wrong combinations should NOT trigger. *)
+(** The pūrvarūpa rule does not apply when the second vowel is not a. *)
 Lemma counterex_109_e_i_not_a : rule_matches R_6_1_109 V_e V_i = false.
 Proof. reflexivity. Qed.
 
+(** The pūrvarūpa rule does not apply when the first vowel is a. *)
 Lemma counterex_109_a_a_not_en : rule_matches R_6_1_109 V_a V_a = false.
 Proof. reflexivity. Qed.
 
+(** The pūrvarūpa rule does not apply when the first vowel is ai. *)
 Lemma counterex_109_ai_a_not_en : rule_matches R_6_1_109 V_ai V_a = false.
 Proof. reflexivity. Qed.
 
-(** ** External Validation: Traditional Sanskrit Examples *)
-
-(** These examples validate the formalization against attested Sanskrit forms
-    from traditional grammar texts (Siddhānta-kaumudī, Laghu-siddhānta-kaumudī). *)
-
-(** dīrgha sandhi (6.1.101): rāma + īśa → rāmeśa (ā + ī → ā via savarṇa dīrgha, but
-    actually this is a + ī → e via guṇa. Let's use correct examples.) *)
-
-(** guru + upadeśa: u + u → ū (savarṇa dīrgha) *)
+(** Validation: u + u yields ū as in guru + upadeśa. *)
 Example validate_guru_upadesha : apply_ac_sandhi V_u V_u = [Svar V_uu].
 Proof. reflexivity. Qed.
 
-(** mahā + ātman: ā + ā → ā (savarṇa dīrgha) *)
+(** Validation: ā + ā yields ā as in mahā + ātman. *)
 Example validate_maha_atman : apply_ac_sandhi V_aa V_aa = [Svar V_aa].
 Proof. reflexivity. Qed.
 
-(** guṇa sandhi (6.1.87): deva + īśa → deveśa (a + ī → e) *)
+(** Validation: a + ī yields e as in deva + īśa. *)
 Example validate_deva_isha : apply_ac_sandhi V_a V_ii = [Svar V_e].
 Proof. reflexivity. Qed.
 
-(** sūrya + udaya: a + u → o (guṇa) *)
+(** Validation: a + u yields o as in sūrya + udaya. *)
 Example validate_surya_udaya : apply_ac_sandhi V_a V_u = [Svar V_o].
 Proof. reflexivity. Qed.
 
-(** mahā + ṛṣi: ā + ṛ → ar (guṇa compound) *)
+(** Validation: ā + ṛ yields ar as in mahā + ṛṣi. *)
 Example validate_maha_rshi : apply_ac_sandhi V_aa V_r = [Svar V_a; Vyan C_r].
 Proof. reflexivity. Qed.
 
-(** vṛddhi sandhi (6.1.88): mahā + aiśvarya → mahaiśvarya (ā + ai → ai) *)
+(** Validation: ā + ai yields ai as in mahā + aiśvarya. *)
 Example validate_maha_aishvarya : apply_ac_sandhi V_aa V_ai = [Svar V_ai].
 Proof. reflexivity. Qed.
 
-(** eka + aiśvarya: a + ai → ai (vṛddhi) *)
+(** Validation: a + ai yields ai as in eka + aiśvarya. *)
 Example validate_eka_aishvarya : apply_ac_sandhi V_a V_ai = [Svar V_ai].
 Proof. reflexivity. Qed.
 
-(** yaṇ sandhi (6.1.77): itī + āha → ity āha (i + ā → y ā) *)
+(** Validation: ī + ā yields y ā as in iti + āha. *)
 Example validate_iti_aha : apply_ac_sandhi V_ii V_aa = [Vyan C_y; Svar V_aa].
 Proof. reflexivity. Qed.
 
-(** madhu + ari: u + a → v a (yaṇ) *)
+(** Validation: u + a yields v a as in madhu + ari. *)
 Example validate_madhu_ari : apply_ac_sandhi V_u V_a = [Vyan C_v; Svar V_a].
 Proof. reflexivity. Qed.
 
-(** pitṛ + ānanda: ṛ + ā → r ā (yaṇ) *)
+(** Validation: ṛ + ā yields r ā as in pitṛ + ānanda. *)
 Example validate_pitr_ananda : apply_ac_sandhi V_r V_aa = [Vyan C_r; Svar V_aa].
 Proof. reflexivity. Qed.
 
-(** ayavāyāv sandhi (6.1.78): ne + ana → nayana (e + a → ay a) *)
+(** Validation: e + a yields e via pūrvarūpa, not ay a. *)
 Example validate_ne_ana : apply_ac_sandhi V_e V_a = [Svar V_e].
 Proof. reflexivity. Qed.
 
-(** Note: e + a triggers pūrvarūpa (6.1.109) which defeats 6.1.78,
-    so we get [Svar V_e] not [Svar V_a; Vyan C_y; Svar V_a]. *)
-
-(** nai + aka → nāyaka (ai + a → āy a, but pūrvarūpa doesn't apply to ai) *)
+(** Validation: ai + a yields āy a as in nai + aka. *)
 Example validate_nai_aka : apply_ac_sandhi V_ai V_a = [Svar V_aa; Vyan C_y; Svar V_a].
 Proof. reflexivity. Qed.
 
-(** go + agra → gavāgra (o + a → av a, but pūrvarūpa gives just o) *)
+(** Validation: o + a yields o via pūrvarūpa. *)
 Example validate_go_agra : apply_ac_sandhi V_o V_a = [Svar V_o].
 Proof. reflexivity. Qed.
 
-(** pau + aka → pāvaka (au + a → āv a) *)
+(** Validation: au + a yields āv a as in pau + aka. *)
 Example validate_pau_aka : apply_ac_sandhi V_au V_a = [Svar V_aa; Vyan C_v; Svar V_a].
 Proof. reflexivity. Qed.
 
-(** pūrvarūpa sandhi (6.1.109): vane + asti → vane 'sti (e + a → e) *)
+(** Validation: e + a yields e via pūrvarūpa as in vane + asti. *)
 Example validate_vane_asti : apply_ac_sandhi V_e V_a = [Svar V_e].
 Proof. reflexivity. Qed.
 
-(** grāmo + atra → grāmo 'tra (o + a → o) *)
+(** Validation: o + a yields o via pūrvarūpa as in grāmo + atra. *)
 Example validate_gramo_atra : apply_ac_sandhi V_o V_a = [Svar V_o].
 Proof. reflexivity. Qed.
 
 (** * Part XV: Non-emptiness *)
 
+(** When a rule matches, its output is never empty. *)
 Theorem apply_rule_nonempty : forall r v1 v2,
   rule_matches r v1 v2 = true ->
   apply_rule r v1 v2 <> [].
@@ -1921,6 +2010,7 @@ Proof.
   - discriminate.
 Qed.
 
+(** The sandhi function always produces a non-empty output. *)
 Theorem apply_ac_sandhi_nonempty : forall v1 v2,
   apply_ac_sandhi v1 v2 <> [].
 Proof.
@@ -1939,6 +2029,7 @@ Qed.
 
 (** * Part XVI: Apavāda Verification *)
 
+(** Witness that vṛddhi 6.1.88 and guṇa 6.1.87 conflict on a + e. *)
 Lemma apavada_88_87_real_conflict : exists v1 v2,
   rule_matches R_6_1_87 v1 v2 = true /\
   rule_matches R_6_1_88 v1 v2 = true /\
@@ -1948,6 +2039,7 @@ Proof.
   repeat split; reflexivity.
 Qed.
 
+(** Witness that dīrgha 6.1.101 and guṇa 6.1.87 conflict on a + a. *)
 Lemma apavada_101_87_real_conflict : exists v1 v2,
   rule_matches R_6_1_87 v1 v2 = true /\
   rule_matches R_6_1_101 v1 v2 = true /\
@@ -1957,6 +2049,7 @@ Proof.
   repeat split; reflexivity.
 Qed.
 
+(** Witness that dīrgha 6.1.101 and yaṇ 6.1.77 conflict on i + i. *)
 Lemma apavada_101_77_real_conflict : exists v1 v2,
   rule_matches R_6_1_77 v1 v2 = true /\
   rule_matches R_6_1_101 v1 v2 = true /\
@@ -1968,25 +2061,23 @@ Qed.
 
 (** * Part XVII: Winner Maximality *)
 
+(** A rule is maximal if it matches and defeats all other matching rules. *)
 Definition is_maximal (r : RuleId) (v1 v2 : Vowel) : Prop :=
   rule_matches r v1 v2 = true /\
   forall r', rule_matches r' v1 v2 = true -> r' <> r -> rule_defeats r r' = true.
 
-(** Totality of defeat on a list: every pair is comparable. *)
-
+(** Every pair of rules in a list is comparable by the defeat relation. *)
 Definition defeats_total_on (rs : list RuleId) : Prop :=
   forall r1 r2,
     In r1 rs -> In r2 rs ->
     r1 = r2 \/ rule_defeats r1 r2 = true \/ rule_defeats r2 r1 = true.
 
 (** A rule is maximal in a list if it defeats all other elements. *)
-
 Definition maximal_in_list (r : RuleId) (rs : list RuleId) : Prop :=
   In r rs /\
   forall r', In r' rs -> r' <> r -> rule_defeats r r' = true.
 
-(** Key lemma: find_winner_aux returns a maximal element when totality holds. *)
-
+(** The tournament winner is always a member of the input list. *)
 Lemma find_winner_aux_In : forall fuel candidates r,
   find_winner_aux fuel candidates = Some r ->
   In r candidates.
@@ -2010,14 +2101,12 @@ Proof.
            ++ right. right. exact HIn'.
 Qed.
 
-(** Structural tournament correctness built from small lemmas. *)
-
-(** Lemma 1: Winner is from the input list. *)
+(** Alias for find_winner_aux_In with clearer name. *)
 Lemma find_winner_aux_member : forall fuel cs r,
   find_winner_aux fuel cs = Some r -> In r cs.
 Proof. exact find_winner_aux_In. Qed.
 
-(** Lemma 2: Singleton list returns its element. *)
+(** A singleton list returns its only element as the winner. *)
 Lemma find_winner_aux_singleton : forall fuel r,
   fuel > 0 -> find_winner_aux fuel [r] = Some r.
 Proof.
@@ -2025,7 +2114,7 @@ Proof.
   destruct fuel; [lia | reflexivity].
 Qed.
 
-(** Lemma 3: Comparison step preserves the winner or loser property. *)
+(** The tournament proceeds by eliminating the loser of each pairwise comparison. *)
 Lemma find_winner_aux_step : forall fuel r1 r2 rest r,
   find_winner_aux (S fuel) (r1 :: r2 :: rest) = Some r ->
   (rule_defeats r1 r2 = true /\ find_winner_aux fuel (r1 :: rest) = Some r) \/
@@ -2038,7 +2127,7 @@ Proof.
   - right. auto.
 Qed.
 
-(** Lemma 4: If r defeats r2 and r is in candidates, totality gives comparability. *)
+(** Distinct comparable rules satisfy one of the defeat directions. *)
 Lemma defeat_or_equal : forall r1 r2,
   r1 = r2 \/ rule_defeats r1 r2 = true \/ rule_defeats r2 r1 = true ->
   r1 <> r2 ->
@@ -2049,7 +2138,7 @@ Proof.
   - exact H.
 Qed.
 
-(** Lemma 5: Asymmetry of defeat. *)
+(** If r1 defeats r2, then r2 does not defeat r1. *)
 Lemma defeat_asymmetric : forall r1 r2,
   rule_defeats r1 r2 = true -> rule_defeats r2 r1 = false.
 Proof.
@@ -2057,11 +2146,11 @@ Proof.
   destruct r1, r2; simpl in H |- *; try discriminate; reflexivity.
 Qed.
 
-(** Lemma 6: Irreflexivity of defeat. *)
+(** No rule defeats itself. *)
 Lemma defeat_irreflexive : forall r, rule_defeats r r = false.
 Proof. exact rule_defeats_irrefl. Qed.
 
-(** Lemma 7: Totality on our specific rules. *)
+(** Any two rules are comparable: equal or one defeats the other. *)
 Lemma defeat_total : forall r1 r2,
   r1 = r2 \/ rule_defeats r1 r2 = true \/ rule_defeats r2 r1 = true.
 Proof.
@@ -2072,7 +2161,7 @@ Proof.
   try (right; right; reflexivity).
 Qed.
 
-(** Lemma 8: In a total tournament, if r1 doesn't defeat r2, then r2 defeats r1 or they're equal. *)
+(** If r1 does not defeat r2, then either they are equal or r2 defeats r1. *)
 Lemma tournament_loser_defeated : forall r1 r2,
   rule_defeats r1 r2 = false ->
   rule_defeats r2 r1 = true \/ r1 = r2.
@@ -2087,7 +2176,7 @@ Proof.
     + rewrite Hdef in H. discriminate.
 Qed.
 
-(** Lemma 9: Trichotomy - exactly one of three cases holds. *)
+(** Exactly one of three cases holds: equal, r1 defeats r2, or r2 defeats r1. *)
 Lemma defeat_trichotomy : forall r1 r2,
   (r1 = r2 /\ rule_defeats r1 r2 = false /\ rule_defeats r2 r1 = false) \/
   (r1 <> r2 /\ rule_defeats r1 r2 = true /\ rule_defeats r2 r1 = false) \/
@@ -2105,8 +2194,7 @@ Proof.
       * auto.
 Qed.
 
-(** These 9 lemmas establish the algebraic properties needed for tournament correctness. *)
-
+(** Rules in the matching list are from the original list and satisfy the match condition. *)
 Lemma matching_rules_subset : forall r rules v1 v2,
   In r (matching_rules rules v1 v2) ->
   In r rules /\ rule_matches r v1 v2 = true.
@@ -2124,6 +2212,7 @@ Proof.
       split. right. exact Hin'. exact Hmatch.
 Qed.
 
+(** The defeat relation is total on any matching rules list. *)
 Lemma matching_rules_totality : forall v1 v2,
   defeats_total_on (matching_rules all_rules v1 v2).
 Proof.
@@ -2138,10 +2227,7 @@ Proof.
   try (right; right; reflexivity).
 Qed.
 
-(** Maximality proof: the algorithmic structure is correct because
-    totality holds. For efficiency, we use case analysis here,
-    but the structural lemmas above document why the algorithm works. *)
-
+(** The selected rule is maximal: it matches and defeats all other matching rules. *)
 Lemma select_rule_is_maximal : forall v1 v2 r,
   select_rule v1 v2 = Some r ->
   is_maximal r v1 v2.
@@ -2161,6 +2247,7 @@ Proof.
     exfalso; apply Hneq; reflexivity.
 Qed.
 
+(** Maximality and being a sandhi winner are equivalent. *)
 Lemma is_maximal_iff_winner : forall r v1 v2,
   is_maximal r v1 v2 <-> sandhi_winner r v1 v2.
 Proof.
@@ -2191,6 +2278,7 @@ Proof.
       -- exact Hneq.
 Qed.
 
+(** The computational rule selection agrees with the declarative winner specification. *)
 Lemma select_rule_correct : forall v1 v2 r,
   select_rule v1 v2 = Some r <-> sandhi_winner r v1 v2.
 Proof.
@@ -2218,9 +2306,7 @@ Proof.
       contradiction Hneq; reflexivity.
 Qed.
 
-(** Uniqueness: at most one rule can be the winner for any vowel pair.
-    This follows from the asymmetry of the defeat relation. *)
-
+(** Two rules cannot mutually defeat each other. *)
 Lemma rule_defeats_asymm : forall r1 r2,
   rule_defeats r1 r2 = true ->
   rule_defeats r2 r1 = true ->
@@ -2230,6 +2316,7 @@ Proof.
   destruct r1, r2; simpl in H1, H2; discriminate.
 Qed.
 
+(** There is at most one winner for any vowel pair. *)
 Theorem winner_unique : forall v1 v2 r1 r2,
   sandhi_winner r1 v1 v2 ->
   sandhi_winner r2 v1 v2 ->
@@ -2248,6 +2335,7 @@ Proof.
     exact (rule_defeats_asymm r1 r2 Hd1 Hd2).
 Qed.
 
+(** The rule selection function returns a unique result. *)
 Corollary select_rule_unique : forall v1 v2 r1 r2,
   select_rule v1 v2 = Some r1 ->
   select_rule v1 v2 = Some r2 ->
@@ -2261,12 +2349,14 @@ Qed.
 
 (** * Part XVIII: Order Independence *)
 
+(** Any two matching rules are comparable by the defeat relation. *)
 Definition rules_total_on (v1 v2 : Vowel) : Prop :=
   forall r1 r2,
     rule_matches r1 v1 v2 = true ->
     rule_matches r2 v1 v2 = true ->
     r1 = r2 \/ rule_defeats r1 r2 = true \/ rule_defeats r2 r1 = true.
 
+(** Totality holds for our set of sandhi rules. *)
 Lemma our_rules_total : forall v1 v2, rules_total_on v1 v2.
 Proof.
   intros v1 v2 r1 r2 H1 H2.
@@ -2278,6 +2368,7 @@ Qed.
 
 (** * Part XIX: Soundness *)
 
+(** Every computational output comes from applying a selected rule. *)
 Theorem soundness_aux : forall v1 v2 out,
   apply_ac_sandhi v1 v2 = out ->
   exists r, select_rule v1 v2 = Some r /\ apply_rule r v1 v2 = out.
@@ -2292,6 +2383,7 @@ Proof.
     discriminate.
 Qed.
 
+(** Soundness: computational outputs satisfy the declarative specification. *)
 Theorem soundness : forall v1 v2 out,
   apply_ac_sandhi v1 v2 = out ->
   ac_sandhi_rel v1 v2 out.
@@ -2308,6 +2400,7 @@ Proof.
     + exact Happ.
 Qed.
 
+(** Completeness: anything satisfying the specification is computed. *)
 Theorem completeness : forall v1 v2 out,
   ac_sandhi_rel v1 v2 out ->
   apply_ac_sandhi v1 v2 = out.
@@ -2329,6 +2422,7 @@ Proof.
     exact (Hno_rule r Hr).
 Qed.
 
+(** The computational sandhi function is equivalent to the declarative specification. *)
 Theorem soundness_completeness : forall v1 v2 out,
   apply_ac_sandhi v1 v2 = out <-> ac_sandhi_rel v1 v2 out.
 Proof.
@@ -2340,14 +2434,10 @@ Qed.
 
 (** * Part XX: Consonant Classes for Visarga Sandhi *)
 
-(** All consonant classes are now computed from Śiva Sūtras in Part II.
-    Here we provide the declarative specifications and prove correspondence. *)
-
-(** khar = kh to r (sūtras 11-13): voiceless stops + sibilants.
-    Computed via pratyahara_consonants C_kh 13. *)
-
+(** Tests whether a consonant is voiceless (khar class). *)
 Definition is_khar (c : Consonant) : bool := is_khar_computed c.
 
+(** Declarative specification of the khar class: voiceless stops and sibilants. *)
 Inductive is_khar_spec : Consonant -> Prop :=
   | Khar_k : is_khar_spec C_k   | Khar_kh : is_khar_spec C_kh
   | Khar_c : is_khar_spec C_c   | Khar_ch : is_khar_spec C_ch
@@ -2357,6 +2447,7 @@ Inductive is_khar_spec : Consonant -> Prop :=
   | Khar_sh : is_khar_spec C_sh | Khar_ss : is_khar_spec C_ss
   | Khar_s : is_khar_spec C_s.
 
+(** The computable khar test matches the declarative specification. *)
 Lemma is_khar_correct : forall c,
   is_khar c = true <-> is_khar_spec c.
 Proof.
@@ -2365,11 +2456,10 @@ Proof.
   - intro H; destruct H; reflexivity.
 Qed.
 
-(** jhaś = jh to ś (sūtras 8-10): voiced stops.
-    Computed via pratyahara_consonants C_jh 10. *)
-
+(** Tests whether a consonant is a voiced stop (jhaś class). *)
 Definition is_jhas (c : Consonant) : bool := is_jhas_computed c.
 
+(** Declarative specification of the jhaś class: voiced stops. *)
 Inductive is_jhas_spec : Consonant -> Prop :=
   | Jhas_g : is_jhas_spec C_g   | Jhas_gh : is_jhas_spec C_gh
   | Jhas_j : is_jhas_spec C_j   | Jhas_jh : is_jhas_spec C_jh
@@ -2377,6 +2467,7 @@ Inductive is_jhas_spec : Consonant -> Prop :=
   | Jhas_d : is_jhas_spec C_d   | Jhas_dh : is_jhas_spec C_dh
   | Jhas_b : is_jhas_spec C_b   | Jhas_bh : is_jhas_spec C_bh.
 
+(** The computable jhaś test matches the declarative specification. *)
 Lemma is_jhas_correct : forall c,
   is_jhas c = true <-> is_jhas_spec c.
 Proof.
@@ -2385,25 +2476,24 @@ Proof.
   - intro H; destruct H; reflexivity.
 Qed.
 
-(** hal = h to l (sūtras 5-14): all consonants.
-    Computed via pratyahara_consonants C_h 14. *)
-
+(** Tests whether a phoneme is any consonant (hal class). *)
 Definition is_hal (c : Consonant) : bool := is_hal_computed c.
 
+(** Every consonant is in the hal class. *)
 Lemma is_hal_total : forall c, is_hal c = true.
 Proof. intro c; destruct c; reflexivity. Qed.
 
-(** yaṇ = y to ṇ (sūtras 5-6): semivowels y v r l.
-    Computed via pratyahara_consonants C_y 6. *)
-
+(** Tests whether a consonant is a semivowel (yaṇ class). *)
 Definition is_yan (c : Consonant) : bool := is_yan_computed c.
 
+(** Declarative specification of the yaṇ class: semivowels y, v, r, l. *)
 Inductive is_yan_spec : Consonant -> Prop :=
   | Yan_y : is_yan_spec C_y
   | Yan_v : is_yan_spec C_v
   | Yan_r : is_yan_spec C_r
   | Yan_l : is_yan_spec C_l.
 
+(** The computable yaṇ test matches the declarative specification. *)
 Lemma is_yan_correct : forall c,
   is_yan c = true <-> is_yan_spec c.
 Proof.
@@ -2414,42 +2504,26 @@ Qed.
 
 (** * Part XXI: Visarga Sandhi (8.3) *)
 
-(** Visarga sandhi operates at word boundaries where a word ends in
-    visarga (ḥ) and the next word begins with various sounds. *)
-
-(** ** 8.3.15 kharavasānayoḥ visarjanīyaḥ *)
-(** "s becomes visarga before khar consonants or at utterance end."
-    This rule creates visarga from underlying s. *)
-
+(** Specifies when s becomes visarga: before voiceless consonants. *)
 Inductive visarga_from_s_spec : Consonant -> Prop :=
   | VFS_khar : forall c, is_khar_spec c -> visarga_from_s_spec c.
 
-(** ** 8.3.23 mo 'nusvāraḥ *)
-(** "m becomes anusvāra before a consonant."
-    padānta-m + hal → anusvāra + hal *)
-
+(** Specifies that word-final m becomes anusvāra before any consonant. *)
 Inductive anusvara_from_m_spec : Consonant -> Prop :=
   | AFM_hal : forall c, anusvara_from_m_spec c.
 
+(** Applies rule 8.3.23: m becomes anusvāra before consonants. *)
 Definition apply_8_3_23 (following : Consonant) : Phoneme := Anusvara.
 
+(** The anusvāra rule applies before any consonant. *)
 Lemma anusvara_from_m_total : forall c, anusvara_from_m_spec c.
 Proof. intro c; constructor. Qed.
 
-(** ** 8.3.34 visarjanīyasya saḥ *)
-(** "Visarga becomes s before khar."
-    ḥ + khar → s + khar (in certain contexts) *)
-
+(** Converts visarga to s before voiceless consonants. *)
 Definition visarga_to_s_before_khar (c : Consonant) : option Phoneme :=
   if is_khar c then Some (Vyan C_s) else None.
 
-(** ** Visarga before voiced sounds (8.3.17 etc.) *)
-(** Before voiced consonants, visarga often becomes the corresponding
-    sibilant or is deleted with compensatory lengthening. *)
-
-(** aḥ + voiced → o (with loss of following a) - 6.1.109 type *)
-(** āḥ + voiced → ā (visarga deletion) *)
-
+(** Handles visarga before voiced consonants with vowel-dependent outcomes. *)
 Definition visarga_before_voiced (prev_vowel : Vowel) (c : Consonant)
   : option (list Phoneme) :=
   if is_jhas c then
@@ -2460,9 +2534,7 @@ Definition visarga_before_voiced (prev_vowel : Vowel) (c : Consonant)
     end
   else None.
 
-(** ** 8.3.36 visarjanīyasya jihvāmūlīyopadhmānīyau kakhupau *)
-(** Before k/kh → jihvāmūlīya; before p/ph → upadhmānīya. *)
-
+(** Returns the appropriate visarga allophone based on the following consonant. *)
 Definition visarga_allophone (following : Consonant) : Phoneme :=
   match following with
   | C_k | C_kh => Jihvamuliya
@@ -2470,6 +2542,7 @@ Definition visarga_allophone (following : Consonant) : Phoneme :=
   | _ => Visarga
   end.
 
+(** Declarative specification of visarga allophones. *)
 Inductive visarga_allophone_spec : Consonant -> Phoneme -> Prop :=
   | VA_k : visarga_allophone_spec C_k Jihvamuliya
   | VA_kh : visarga_allophone_spec C_kh Jihvamuliya
@@ -2479,6 +2552,7 @@ Inductive visarga_allophone_spec : Consonant -> Phoneme -> Prop :=
       c <> C_k -> c <> C_kh -> c <> C_p -> c <> C_ph ->
       visarga_allophone_spec c Visarga.
 
+(** The computable allophone function matches the declarative specification. *)
 Lemma visarga_allophone_correct : forall c p,
   visarga_allophone c = p <-> visarga_allophone_spec c p.
 Proof.
@@ -2491,8 +2565,7 @@ Proof.
     destruct c; try reflexivity; contradiction.
 Qed.
 
-(** Combined visarga sandhi application. *)
-
+(** Possible outcomes of visarga sandhi transformation. *)
 Inductive VisargaSandhiResult : Type :=
   | VSR_visarga : VisargaSandhiResult
   | VSR_s : VisargaSandhiResult
@@ -2500,6 +2573,7 @@ Inductive VisargaSandhiResult : Type :=
   | VSR_deletion : Vowel -> VisargaSandhiResult
   | VSR_o : VisargaSandhiResult.
 
+(** Computes the visarga sandhi outcome based on preceding vowel and following consonant. *)
 Definition apply_visarga_sandhi (prev_vowel : Vowel) (following : Consonant)
   : VisargaSandhiResult :=
   if is_khar following then VSR_visarga
@@ -2511,37 +2585,31 @@ Definition apply_visarga_sandhi (prev_vowel : Vowel) (following : Consonant)
     end
   else VSR_visarga.
 
-(** Independent declarative spec for visarga sandhi based on sūtras.
-    Each constructor corresponds to a specific grammatical rule. *)
-
+(** Declarative specification of visarga sandhi based on grammatical rules. *)
 Inductive visarga_sandhi_spec : Vowel -> Consonant -> VisargaSandhiResult -> Prop :=
   | VSS_khar : forall v c,
-      (** 8.3.15 kharavasānayoḥ visarjanīyaḥ: visarga before khar stays visarga. *)
       is_khar_spec c ->
       visarga_sandhi_spec v c VSR_visarga
   | VSS_jhas_a : forall c,
-      (** 6.1.109 + 8.3.17: aḥ before voiced → o (pūrvarūpa with preceding a). *)
       is_khar c = false ->
       is_jhas_spec c ->
       visarga_sandhi_spec V_a c VSR_o
   | VSS_jhas_aa : forall c,
-      (** 8.3.17: āḥ before voiced → ā (visarga deletion, vowel unchanged). *)
       is_khar c = false ->
       is_jhas_spec c ->
       visarga_sandhi_spec V_aa c (VSR_deletion V_aa)
   | VSS_jhas_other : forall v c,
-      (** 8.3.17: other vowel + ḥ before voiced → vowel + r. *)
       is_khar c = false ->
       is_jhas_spec c ->
       v <> V_a ->
       v <> V_aa ->
       visarga_sandhi_spec v c VSR_r
   | VSS_default : forall v c,
-      (** Default: visarga preserved in other contexts. *)
       is_khar c = false ->
       is_jhas c = false ->
       visarga_sandhi_spec v c VSR_visarga.
 
+(** The computable visarga sandhi matches the declarative specification. *)
 Theorem visarga_sandhi_correct : forall v c r,
   visarga_sandhi_spec v c r <-> apply_visarga_sandhi v c = r.
 Proof.
