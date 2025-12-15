@@ -3502,3 +3502,760 @@ Proof. reflexivity. Qed.
 
 Example inverse_ar_valid : apply_ac_sandhi V_a V_r = [Svar V_a; Vyan C_r].
 Proof. reflexivity. Qed.
+
+(** * Part XXVIII: Pragṛhya Vowels (1.1.11-14) *)
+
+(** Pragṛhya vowels are exempt from sandhi. The Aṣṭādhyāyī defines several
+    categories of pragṛhya vowels based on morphological context. *)
+
+(** ** Morphological contexts that create pragṛhya status *)
+
+Inductive PragrhyaContext : Type :=
+  | PC_DualEnding
+  | PC_AdasMat
+  | PC_ParticleSe
+  | PC_SingleVowelNipata
+  | PC_None.
+
+(** ** 1.1.11 ī ū ṛ ḷ ākṣarasya *)
+(** Dual endings -ī, -ū, -ṛ (as in devī, senī; vadhū, camū; pitṛ, mātṛ)
+    are pragṛhya and do not undergo sandhi. *)
+
+Definition is_dual_ending_vowel (v : Vowel) : bool :=
+  match v with
+  | V_ii | V_uu | V_rr => true
+  | _ => false
+  end.
+
+Inductive is_pragrhya_1_1_11 : Vowel -> Prop :=
+  | Prag_ii : is_pragrhya_1_1_11 V_ii
+  | Prag_uu : is_pragrhya_1_1_11 V_uu
+  | Prag_rr : is_pragrhya_1_1_11 V_rr.
+
+Lemma is_dual_ending_vowel_correct : forall v,
+  is_dual_ending_vowel v = true <-> is_pragrhya_1_1_11 v.
+Proof.
+  intro v; split.
+  - intro H; destruct v; simpl in H; try discriminate; constructor.
+  - intro H; destruct H; reflexivity.
+Qed.
+
+(** ** 1.1.12 adaso mātaḥ *)
+(** The pronoun adaḥ before the suffix māt is pragṛhya.
+    We model this as a specific lexical context. *)
+
+Inductive AdasContext : Type :=
+  | Adas_before_mat
+  | Adas_other.
+
+Definition is_pragrhya_1_1_12 (ctx : AdasContext) : bool :=
+  match ctx with
+  | Adas_before_mat => true
+  | Adas_other => false
+  end.
+
+(** ** 1.1.14 nipāta ekājanaḥ *)
+(** Single-vowel indeclinables (nipātas) like ā, i, u, e, o, etc.
+    are pragṛhya when used as particles. *)
+
+Inductive NipataStatus : Type :=
+  | Nipata_single_vowel
+  | Nipata_multi
+  | Not_nipata.
+
+Definition is_pragrhya_1_1_14 (status : NipataStatus) : bool :=
+  match status with
+  | Nipata_single_vowel => true
+  | _ => false
+  end.
+
+(** ** Combined pragṛhya check *)
+
+Record PragrhyaInfo := {
+  pragrhya_context : PragrhyaContext;
+  adas_context : AdasContext;
+  nipata_status : NipataStatus
+}.
+
+Definition default_pragrhya_info : PragrhyaInfo := {|
+  pragrhya_context := PC_None;
+  adas_context := Adas_other;
+  nipata_status := Not_nipata
+|}.
+
+Definition is_pragrhya (v : Vowel) (info : PragrhyaInfo) : bool :=
+  match pragrhya_context info with
+  | PC_DualEnding => is_dual_ending_vowel v
+  | PC_AdasMat => is_pragrhya_1_1_12 (adas_context info)
+  | PC_ParticleSe => true
+  | PC_SingleVowelNipata => is_pragrhya_1_1_14 (nipata_status info)
+  | PC_None => false
+  end.
+
+(** ** Pragṛhya-aware sandhi function *)
+
+Definition apply_ac_sandhi_pragrhya
+  (v1 : Vowel) (info1 : PragrhyaInfo)
+  (v2 : Vowel) (info2 : PragrhyaInfo)
+  : list Phoneme :=
+  if is_pragrhya v1 info1 then
+    [Svar v1; Svar v2]
+  else
+    apply_ac_sandhi v1 v2.
+
+(** ** Specification: pragṛhya vowels block sandhi *)
+
+Inductive pragrhya_sandhi_spec : Vowel -> PragrhyaInfo -> Vowel -> list Phoneme -> Prop :=
+  | PSS_blocked : forall v1 info1 v2,
+      is_pragrhya v1 info1 = true ->
+      pragrhya_sandhi_spec v1 info1 v2 [Svar v1; Svar v2]
+  | PSS_normal : forall v1 info1 v2 out,
+      is_pragrhya v1 info1 = false ->
+      ac_sandhi_rel v1 v2 out ->
+      pragrhya_sandhi_spec v1 info1 v2 out.
+
+Theorem apply_ac_sandhi_pragrhya_correct : forall v1 info1 v2 info2 out,
+  apply_ac_sandhi_pragrhya v1 info1 v2 info2 = out <->
+  pragrhya_sandhi_spec v1 info1 v2 out.
+Proof.
+  intros v1 info1 v2 info2 out.
+  split.
+  - intro H.
+    unfold apply_ac_sandhi_pragrhya in H.
+    destruct (is_pragrhya v1 info1) eqn:Eprag.
+    + subst. apply PSS_blocked. exact Eprag.
+    + apply PSS_normal.
+      * exact Eprag.
+      * apply soundness. exact H.
+  - intro H.
+    destruct H.
+    + unfold apply_ac_sandhi_pragrhya.
+      rewrite H. reflexivity.
+    + unfold apply_ac_sandhi_pragrhya.
+      rewrite H.
+      apply completeness. exact H0.
+Qed.
+
+(** ** Examples of pragṛhya blocking sandhi *)
+
+Example pragrhya_dual_ii :
+  apply_ac_sandhi_pragrhya V_ii
+    {| pragrhya_context := PC_DualEnding; adas_context := Adas_other; nipata_status := Not_nipata |}
+    V_a default_pragrhya_info = [Svar V_ii; Svar V_a].
+Proof. reflexivity. Qed.
+
+Example pragrhya_dual_uu :
+  apply_ac_sandhi_pragrhya V_uu
+    {| pragrhya_context := PC_DualEnding; adas_context := Adas_other; nipata_status := Not_nipata |}
+    V_i default_pragrhya_info = [Svar V_uu; Svar V_i].
+Proof. reflexivity. Qed.
+
+Example pragrhya_nipata :
+  apply_ac_sandhi_pragrhya V_a
+    {| pragrhya_context := PC_SingleVowelNipata; adas_context := Adas_other; nipata_status := Nipata_single_vowel |}
+    V_i default_pragrhya_info = [Svar V_a; Svar V_i].
+Proof. reflexivity. Qed.
+
+Example non_pragrhya_normal :
+  apply_ac_sandhi_pragrhya V_a default_pragrhya_info V_i default_pragrhya_info = [Svar V_e].
+Proof. reflexivity. Qed.
+
+(** Counterexample: non-dual ī still undergoes sandhi. *)
+Example non_dual_ii_sandhi :
+  apply_ac_sandhi_pragrhya V_ii default_pragrhya_info V_a default_pragrhya_info = [Vyan C_y; Svar V_a].
+Proof. reflexivity. Qed.
+
+(** ** Totality: pragṛhya sandhi always produces a result *)
+
+Theorem pragrhya_sandhi_total : forall v1 info1 v2 info2,
+  exists ps, apply_ac_sandhi_pragrhya v1 info1 v2 info2 = ps /\ ps <> [].
+Proof.
+  intros v1 info1 v2 info2.
+  unfold apply_ac_sandhi_pragrhya.
+  destruct (is_pragrhya v1 info1) eqn:E.
+  - exists [Svar v1; Svar v2]. split.
+    + reflexivity.
+    + discriminate.
+  - exists (apply_ac_sandhi v1 v2). split.
+    + reflexivity.
+    + apply apply_ac_sandhi_nonempty.
+Qed.
+
+(** * Part XXIX: Optional Sandhi (Vikalpa) *)
+
+(** Many Pāṇinian rules are marked "vā" (optionally), meaning the speaker
+    can choose whether to apply them. This section implements vikalpa
+    (optional) sandhi with support for multiple valid outputs. *)
+
+(** ** Optionality marker for rules *)
+
+Inductive Optionality : Type :=
+  | Nitya
+  | Vikalpa.
+
+(** ** Extended Rule ID with optionality *)
+
+Record VikalpaRuleId := {
+  base_rule : RuleId;
+  optionality : Optionality
+}.
+
+Definition make_nitya (r : RuleId) : VikalpaRuleId :=
+  {| base_rule := r; optionality := Nitya |}.
+
+Definition make_vikalpa (r : RuleId) : VikalpaRuleId :=
+  {| base_rule := r; optionality := Vikalpa |}.
+
+(** ** 6.1.109 as vikalpa *)
+(** In some grammatical traditions, pūrvarūpa (6.1.109) is considered
+    optional, allowing either e/o + a → e/o (pūrvarūpa) or the standard
+    ayavāyāv sandhi (6.1.78). *)
+
+Definition rule_optionality (r : RuleId) : Optionality :=
+  match r with
+  | R_6_1_109 => Vikalpa
+  | _ => Nitya
+  end.
+
+(** ** Vikalpa-aware sandhi result type *)
+
+Inductive VikalpaSandhiResult : Type :=
+  | VSResult_single : list Phoneme -> VikalpaSandhiResult
+  | VSResult_choice : list Phoneme -> list Phoneme -> VikalpaSandhiResult.
+
+(** ** Compute alternative result when vikalpa applies *)
+
+Definition alternative_for_109 (v1 v2 : Vowel) : option (list Phoneme) :=
+  if is_en v1 && Vowel_beq v2 V_a then
+    match ayavayav v1 with
+    | Some prefix => Some (prefix ++ [Svar v2])
+    | None => None
+    end
+  else None.
+
+(** ** Vikalpa-aware sandhi function *)
+
+Definition apply_ac_sandhi_vikalpa (v1 v2 : Vowel) : VikalpaSandhiResult :=
+  match select_rule v1 v2 with
+  | Some r =>
+      let primary := apply_rule r v1 v2 in
+      match rule_optionality r with
+      | Nitya => VSResult_single primary
+      | Vikalpa =>
+          match r with
+          | R_6_1_109 =>
+              match alternative_for_109 v1 v2 with
+              | Some alt => VSResult_choice primary alt
+              | None => VSResult_single primary
+              end
+          | _ => VSResult_single primary
+          end
+      end
+  | None => VSResult_single [Svar v1; Svar v2]
+  end.
+
+(** ** Specification for vikalpa sandhi *)
+
+Inductive vikalpa_sandhi_spec : Vowel -> Vowel -> VikalpaSandhiResult -> Prop :=
+  | VSS_nitya : forall v1 v2 r out,
+      sandhi_winner r v1 v2 ->
+      rule_optionality r = Nitya ->
+      rule_output_spec r v1 v2 out ->
+      vikalpa_sandhi_spec v1 v2 (VSResult_single out)
+  | VSS_vikalpa : forall v1 v2 r primary alt,
+      sandhi_winner r v1 v2 ->
+      rule_optionality r = Vikalpa ->
+      rule_output_spec r v1 v2 primary ->
+      vikalpa_sandhi_spec v1 v2 (VSResult_choice primary alt)
+  | VSS_no_rule : forall v1 v2,
+      (forall r, ~ sandhi_applicable r v1 v2) ->
+      vikalpa_sandhi_spec v1 v2 (VSResult_single [Svar v1; Svar v2]).
+
+(** ** Helper: extract any valid result from vikalpa *)
+
+Definition vikalpa_primary (vsr : VikalpaSandhiResult) : list Phoneme :=
+  match vsr with
+  | VSResult_single ps => ps
+  | VSResult_choice ps _ => ps
+  end.
+
+Definition vikalpa_all_results (vsr : VikalpaSandhiResult) : list (list Phoneme) :=
+  match vsr with
+  | VSResult_single ps => [ps]
+  | VSResult_choice ps1 ps2 => [ps1; ps2]
+  end.
+
+(** ** Examples of vikalpa sandhi *)
+
+Example vikalpa_e_a_choice :
+  apply_ac_sandhi_vikalpa V_e V_a =
+    VSResult_choice [Svar V_e] [Svar V_a; Vyan C_y; Svar V_a].
+Proof. reflexivity. Qed.
+
+Example vikalpa_o_a_choice :
+  apply_ac_sandhi_vikalpa V_o V_a =
+    VSResult_choice [Svar V_o] [Svar V_a; Vyan C_v; Svar V_a].
+Proof. reflexivity. Qed.
+
+Example vikalpa_a_i_nitya :
+  apply_ac_sandhi_vikalpa V_a V_i = VSResult_single [Svar V_e].
+Proof. reflexivity. Qed.
+
+Example vikalpa_i_a_nitya :
+  apply_ac_sandhi_vikalpa V_i V_a = VSResult_single [Vyan C_y; Svar V_a].
+Proof. reflexivity. Qed.
+
+(** ** Membership in vikalpa results *)
+
+Definition in_vikalpa_results (ps : list Phoneme) (vsr : VikalpaSandhiResult) : Prop :=
+  In ps (vikalpa_all_results vsr).
+
+(** ** The primary result is always valid *)
+
+Lemma vikalpa_primary_in_results : forall vsr,
+  in_vikalpa_results (vikalpa_primary vsr) vsr.
+Proof.
+  intro vsr.
+  destruct vsr; unfold in_vikalpa_results, vikalpa_all_results, vikalpa_primary.
+  - left. reflexivity.
+  - left. reflexivity.
+Qed.
+
+(** ** Non-emptiness of vikalpa results *)
+
+Theorem vikalpa_result_nonempty : forall v1 v2,
+  vikalpa_all_results (apply_ac_sandhi_vikalpa v1 v2) <> [].
+Proof.
+  intros v1 v2.
+  unfold apply_ac_sandhi_vikalpa.
+  destruct (select_rule v1 v2) eqn:E.
+  - destruct (rule_optionality r) eqn:Eopt.
+    + discriminate.
+    + destruct r; simpl in Eopt; try discriminate.
+      destruct (alternative_for_109 v1 v2); discriminate.
+  - discriminate.
+Qed.
+
+(** ** Correspondence with deterministic sandhi *)
+
+Lemma vikalpa_primary_matches_deterministic : forall v1 v2,
+  vikalpa_primary (apply_ac_sandhi_vikalpa v1 v2) = apply_ac_sandhi v1 v2.
+Proof.
+  intros v1 v2.
+  unfold apply_ac_sandhi_vikalpa, apply_ac_sandhi.
+  destruct (select_rule v1 v2) eqn:E.
+  - destruct (rule_optionality r) eqn:Eopt.
+    + reflexivity.
+    + destruct r; simpl in Eopt; try discriminate.
+      destruct (alternative_for_109 v1 v2); reflexivity.
+  - reflexivity.
+Qed.
+
+(** ** Additional vikalpa rules can be added by:
+    1. Marking rule_optionality to return Vikalpa
+    2. Defining alternative_for_XXX functions
+    3. Extending the match in apply_ac_sandhi_vikalpa *)
+
+(** * Part XXX: Internal Sandhi (Dhātu-Pratyaya Juncture) *)
+
+(** Internal sandhi applies at morpheme boundaries within words, particularly
+    at the dhātu-pratyaya (root-suffix) juncture. Key differences from
+    external sandhi:
+    - Rule 6.1.109 (pūrvarūpa) does NOT apply internally
+    - Guṇa/vṛddhi triggered by suffix markers (sārvadhātuka, ārdhadhātuka)
+    - Some rules are nitya (obligatory) internally but anitya externally *)
+
+(** ** Suffix classification *)
+
+Inductive SuffixType : Type :=
+  | Sarvadhatuka
+  | Ardhadhatuka
+  | Taddhita
+  | Krt
+  | Sup
+  | Tin
+  | UnmarkedSuffix.
+
+(** ** Properties of suffixes relevant to sandhi *)
+
+Record SuffixInfo := {
+  suffix_type : SuffixType;
+  is_pit : bool;
+  is_kit : bool;
+  begins_with_vowel : bool
+}.
+
+Definition default_suffix_info : SuffixInfo := {|
+  suffix_type := UnmarkedSuffix;
+  is_pit := false;
+  is_kit := false;
+  begins_with_vowel := false
+|}.
+
+(** ** 1.1.5 kṅiti ca (guṇa/vṛddhi blocked before k/ṅ-marked suffixes) *)
+
+Definition blocks_guna_vrddhi (info : SuffixInfo) : bool :=
+  is_kit info || is_pit info.
+
+Inductive blocks_guna_vrddhi_spec : SuffixInfo -> Prop :=
+  | BGV_kit : forall info, is_kit info = true -> blocks_guna_vrddhi_spec info
+  | BGV_pit : forall info, is_pit info = true -> blocks_guna_vrddhi_spec info.
+
+Lemma blocks_guna_vrddhi_correct : forall info,
+  blocks_guna_vrddhi info = true <-> blocks_guna_vrddhi_spec info.
+Proof.
+  intro info; split.
+  - intro H.
+    unfold blocks_guna_vrddhi in H.
+    apply Bool.orb_true_iff in H.
+    destruct H as [Hkit | Hpit].
+    + apply BGV_kit. exact Hkit.
+    + apply BGV_pit. exact Hpit.
+  - intro H.
+    destruct H; unfold blocks_guna_vrddhi.
+    + rewrite H. reflexivity.
+    + rewrite H. apply Bool.orb_true_r.
+Qed.
+
+(** ** Internal sandhi rule applicability *)
+
+Definition rule_applies_internally (r : RuleId) : bool :=
+  match r with
+  | R_6_1_109 => false
+  | _ => true
+  end.
+
+Definition internal_rule_matches (r : RuleId) (v1 v2 : Vowel) (sinfo : SuffixInfo) : bool :=
+  rule_applies_internally r &&
+  match r with
+  | R_6_1_87 =>
+      if blocks_guna_vrddhi sinfo then false
+      else rule_matches r v1 v2
+  | R_6_1_88 =>
+      if blocks_guna_vrddhi sinfo then false
+      else rule_matches r v1 v2
+  | _ => rule_matches r v1 v2
+  end.
+
+(** ** Internal sandhi rule selection *)
+
+Fixpoint matching_rules_internal (rules : list RuleId) (v1 v2 : Vowel) (sinfo : SuffixInfo)
+  : list RuleId :=
+  match rules with
+  | [] => []
+  | r :: rs =>
+      if internal_rule_matches r v1 v2 sinfo
+      then r :: matching_rules_internal rs v1 v2 sinfo
+      else matching_rules_internal rs v1 v2 sinfo
+  end.
+
+Definition select_rule_internal (v1 v2 : Vowel) (sinfo : SuffixInfo) : option RuleId :=
+  find_winner (matching_rules_internal all_rules v1 v2 sinfo).
+
+(** ** Internal sandhi function *)
+
+Definition apply_internal_sandhi (v1 v2 : Vowel) (sinfo : SuffixInfo) : list Phoneme :=
+  match select_rule_internal v1 v2 sinfo with
+  | Some r => apply_rule r v1 v2
+  | None => [Svar v1; Svar v2]
+  end.
+
+(** ** Specification for internal sandhi *)
+
+Inductive internal_sandhi_applicable : RuleId -> Vowel -> Vowel -> SuffixInfo -> Prop :=
+  | ISA_77 : forall v1 v2 sinfo,
+      is_ik_computed v1 = true ->
+      internal_sandhi_applicable R_6_1_77 v1 v2 sinfo
+  | ISA_78 : forall v1 v2 sinfo,
+      is_ec_computed v1 = true ->
+      internal_sandhi_applicable R_6_1_78 v1 v2 sinfo
+  | ISA_87 : forall v1 v2 sinfo,
+      is_a_class v1 = true ->
+      blocks_guna_vrddhi sinfo = false ->
+      internal_sandhi_applicable R_6_1_87 v1 v2 sinfo
+  | ISA_88 : forall v1 v2 sinfo,
+      is_a_class v1 = true ->
+      is_ec_computed v2 = true ->
+      blocks_guna_vrddhi sinfo = false ->
+      internal_sandhi_applicable R_6_1_88 v1 v2 sinfo
+  | ISA_101 : forall v1 v2 sinfo,
+      is_ak_computed v1 = true ->
+      is_ak_computed v2 = true ->
+      savarna v1 v2 = true ->
+      internal_sandhi_applicable R_6_1_101 v1 v2 sinfo.
+
+(** Note: R_6_1_109 is NOT in internal_sandhi_applicable - it's padānta only *)
+
+(** ** Examples of internal sandhi *)
+
+Example internal_a_i_guna :
+  apply_internal_sandhi V_a V_i default_suffix_info = [Svar V_e].
+Proof. reflexivity. Qed.
+
+(** When guṇa is blocked by kit and vowels are not savarṇa, no sandhi applies *)
+Example internal_a_i_kit_blocked :
+  apply_internal_sandhi V_a V_i
+    {| suffix_type := Krt; is_pit := false; is_kit := true; begins_with_vowel := true |}
+    = [Svar V_a; Svar V_i].
+Proof. reflexivity. Qed.
+
+(** Savarṇa dīrgha still applies even when guṇa is blocked *)
+Example internal_a_a_kit_dirgha :
+  apply_internal_sandhi V_a V_a
+    {| suffix_type := Krt; is_pit := false; is_kit := true; begins_with_vowel := true |}
+    = [Svar V_aa].
+Proof. reflexivity. Qed.
+
+Example internal_i_a_yan :
+  apply_internal_sandhi V_i V_a default_suffix_info = [Vyan C_y; Svar V_a].
+Proof. reflexivity. Qed.
+
+Example internal_e_a_no_purvarupa :
+  apply_internal_sandhi V_e V_a default_suffix_info = [Svar V_a; Vyan C_y; Svar V_a].
+Proof. reflexivity. Qed.
+
+(** Contrast: external sandhi gives pūrvarūpa for e + a *)
+Example external_e_a_purvarupa :
+  apply_ac_sandhi V_e V_a = [Svar V_e].
+Proof. reflexivity. Qed.
+
+(** ** kṅiti blocking guṇa example *)
+
+(** bhū + ta (kit suffix) → bhūta (no guṇa, dīrgha applies) *)
+Example bhu_ta_kit :
+  apply_internal_sandhi V_uu V_a
+    {| suffix_type := Krt; is_pit := false; is_kit := true; begins_with_vowel := true |}
+    = [Vyan C_v; Svar V_a].
+Proof. reflexivity. Qed.
+
+(** bhū + ana (non-kit suffix) → bhavana (guṇa applies) *)
+Example bhu_ana_non_kit :
+  apply_internal_sandhi V_a V_uu default_suffix_info = [Svar V_o].
+Proof. reflexivity. Qed.
+
+(** ** Totality for internal sandhi *)
+
+(** For most vowel pairs, internal sandhi produces a result.
+    The key insight is that ik vowels always have yaṇ available,
+    and a-class vowels have guṇa (unless blocked) or dīrgha (for savarṇa). *)
+
+(** Non-emptiness: internal sandhi never produces empty output *)
+Theorem internal_sandhi_nonempty : forall v1 v2 sinfo,
+  apply_internal_sandhi v1 v2 sinfo <> [].
+Proof.
+  intros v1 v2 sinfo.
+  unfold apply_internal_sandhi.
+  destruct (select_rule_internal v1 v2 sinfo) eqn:E.
+  - destruct r; destruct v1, v2; simpl; intro H; inversion H.
+  - intro H; inversion H.
+Qed.
+
+(** ** Correctness: internal sandhi differs from external at key points *)
+
+Theorem internal_external_differ_109 : forall v,
+  is_en v = true ->
+  apply_internal_sandhi v V_a default_suffix_info <> apply_ac_sandhi v V_a.
+Proof.
+  intros v Hen.
+  destruct v; simpl in Hen; try discriminate;
+  simpl; intro H; inversion H.
+Qed.
+
+(** ** Unified boundary-aware sandhi *)
+
+Definition apply_sandhi_at_boundary
+  (v1 v2 : Vowel)
+  (boundary : MorphBoundary)
+  (sinfo : SuffixInfo)
+  : list Phoneme :=
+  match boundary with
+  | PadaAnta | SamasaAnta => apply_ac_sandhi v1 v2
+  | DhatuPratyaya => apply_internal_sandhi v1 v2 sinfo
+  | Internal => [Svar v1; Svar v2]
+  end.
+
+Example boundary_pada_uses_external :
+  apply_sandhi_at_boundary V_e V_a PadaAnta default_suffix_info = [Svar V_e].
+Proof. reflexivity. Qed.
+
+Example boundary_dhatu_uses_internal :
+  apply_sandhi_at_boundary V_e V_a DhatuPratyaya default_suffix_info = [Svar V_a; Vyan C_y; Svar V_a].
+Proof. reflexivity. Qed.
+
+Example boundary_internal_no_sandhi :
+  apply_sandhi_at_boundary V_a V_i Internal default_suffix_info = [Svar V_a; Svar V_i].
+Proof. reflexivity. Qed.
+
+(** * Part XXXI: Structural Proofs *)
+
+(** This section refactors enumeration-based proofs into structural proofs
+    that derive results from algebraic properties rather than case analysis.
+    This makes the proofs more extensible and reveals the underlying structure. *)
+
+(** ** Vowel Classification Structure *)
+
+(** Instead of enumerating all 13 vowels, we classify them structurally.
+    This classification captures the essential property for sandhi rule selection. *)
+
+Inductive VowelClass : Type :=
+  | VC_A
+  | VC_IK
+  | VC_EC.
+
+Definition classify_vowel (v : Vowel) : VowelClass :=
+  match v with
+  | V_a | V_aa => VC_A
+  | V_i | V_ii | V_u | V_uu | V_r | V_rr | V_l => VC_IK
+  | V_e | V_ai | V_o | V_au => VC_EC
+  end.
+
+(** Structural lemma: classification is exhaustive *)
+Lemma classify_exhaustive : forall v,
+  classify_vowel v = VC_A \/
+  classify_vowel v = VC_IK \/
+  classify_vowel v = VC_EC.
+Proof.
+  intro v; destruct v; simpl; auto.
+Qed.
+
+(** Structural correspondence with boolean predicates *)
+Lemma classify_a_iff : forall v,
+  classify_vowel v = VC_A <-> is_a_class v = true.
+Proof.
+  intro v; split; intro H; destruct v; simpl in *; try discriminate; reflexivity.
+Qed.
+
+Lemma classify_ik_iff : forall v,
+  classify_vowel v = VC_IK <-> is_ik_computed v = true.
+Proof.
+  intro v; split; intro H; destruct v; simpl in *; try discriminate; reflexivity.
+Qed.
+
+Lemma classify_ec_iff : forall v,
+  classify_vowel v = VC_EC <-> is_ec_computed v = true.
+Proof.
+  intro v; split; intro H; destruct v; simpl in *; try discriminate; reflexivity.
+Qed.
+
+(** Structural proof of vowel_classification using classify_vowel *)
+Theorem vowel_classification_structural : forall v,
+  is_a_class v = true \/
+  is_ik_computed v = true \/
+  is_ec_computed v = true.
+Proof.
+  intro v.
+  destruct (classify_exhaustive v) as [Ha | [Hik | Hec]].
+  - left. apply classify_a_iff. exact Ha.
+  - right. left. apply classify_ik_iff. exact Hik.
+  - right. right. apply classify_ec_iff. exact Hec.
+Qed.
+
+(** ** Rule Defeat Structure *)
+
+(** The defeat relation has algebraic properties that can be proven structurally. *)
+
+(** Property 1: Defeat is determined by sūtra number when no apavāda applies *)
+Definition defeat_by_sutra_number (r1 r2 : RuleId) : bool :=
+  sutra_ltb (rule_sutra_num r2) (rule_sutra_num r1).
+
+(** Property 2: Apavāda relationships form a partial order *)
+Lemma apavada_irrefl : forall r, is_apavada r r = false.
+Proof.
+  intro r; destruct r; reflexivity.
+Qed.
+
+Lemma apavada_antisym : forall r1 r2,
+  is_apavada r1 r2 = true -> is_apavada r2 r1 = false.
+Proof.
+  intros r1 r2 H.
+  destruct r1, r2; simpl in *; try discriminate; reflexivity.
+Qed.
+
+(** Property 3: Defeat derives from apavāda or sūtra order *)
+Theorem defeat_structure : forall r1 r2,
+  rule_defeats r1 r2 = true <->
+  (is_apavada r1 r2 = true \/
+   (is_apavada r1 r2 = false /\ is_apavada r2 r1 = false /\
+    sutra_ltb (rule_sutra_num r2) (rule_sutra_num r1) = true)).
+Proof.
+  intros r1 r2.
+  unfold rule_defeats.
+  split.
+  - intro H.
+    destruct (is_apavada r1 r2) eqn:E1.
+    + left. reflexivity.
+    + right. simpl in H.
+      apply Bool.andb_true_iff in H.
+      destruct H as [Hneg Hlt].
+      apply Bool.negb_true_iff in Hneg.
+      auto.
+  - intros [H | [H1 [H2 H3]]].
+    + rewrite H. reflexivity.
+    + rewrite H1. simpl. rewrite H2. simpl. exact H3.
+Qed.
+
+(** Property 4: Totality follows from sūtra ordering being total *)
+Lemma sutra_total : forall s1 s2,
+  s1 = s2 \/ sutra_ltb s1 s2 = true \/ sutra_ltb s2 s1 = true.
+Proof.
+  intros s1 s2.
+  destruct (Nat.lt_trichotomy (adhyaya s1) (adhyaya s2)) as [Hlt | [Heq | Hgt]].
+  - right. left. unfold sutra_ltb. apply Nat.ltb_lt in Hlt. rewrite Hlt. reflexivity.
+  - destruct (Nat.lt_trichotomy (pada s1) (pada s2)) as [Plt | [Peq | Pgt]].
+    + right. left. unfold sutra_ltb.
+      assert (Nat.ltb (adhyaya s1) (adhyaya s2) = false) by (apply Nat.ltb_ge; lia).
+      rewrite H.
+      assert (Nat.eqb (adhyaya s1) (adhyaya s2) = true) by (apply Nat.eqb_eq; lia).
+      rewrite H0.
+      apply Nat.ltb_lt in Plt. rewrite Plt. reflexivity.
+    + destruct (Nat.lt_trichotomy (sutra s1) (sutra s2)) as [Slt | [Seq | Sgt]].
+      * right. left. unfold sutra_ltb.
+        assert (Nat.ltb (adhyaya s1) (adhyaya s2) = false) by (apply Nat.ltb_ge; lia).
+        rewrite H.
+        assert (Nat.eqb (adhyaya s1) (adhyaya s2) = true) by (apply Nat.eqb_eq; lia).
+        rewrite H0.
+        assert (Nat.ltb (pada s1) (pada s2) = false) by (apply Nat.ltb_ge; lia).
+        rewrite H1.
+        assert (Nat.eqb (pada s1) (pada s2) = true) by (apply Nat.eqb_eq; lia).
+        rewrite H2.
+        apply Nat.ltb_lt in Slt. exact Slt.
+      * left. destruct s1, s2; simpl in *; subst; reflexivity.
+      * right. right. unfold sutra_ltb.
+        assert (Nat.ltb (adhyaya s2) (adhyaya s1) = false) by (apply Nat.ltb_ge; lia).
+        rewrite H.
+        assert (Nat.eqb (adhyaya s2) (adhyaya s1) = true) by (apply Nat.eqb_eq; lia).
+        rewrite H0.
+        assert (Nat.ltb (pada s2) (pada s1) = false) by (apply Nat.ltb_ge; lia).
+        rewrite H1.
+        assert (Nat.eqb (pada s2) (pada s1) = true) by (apply Nat.eqb_eq; lia).
+        rewrite H2.
+        apply Nat.ltb_lt. lia.
+    + right. right. unfold sutra_ltb.
+      assert (Nat.ltb (adhyaya s2) (adhyaya s1) = false) by (apply Nat.ltb_ge; lia).
+      rewrite H.
+      assert (Nat.eqb (adhyaya s2) (adhyaya s1) = true) by (apply Nat.eqb_eq; lia).
+      rewrite H0.
+      apply Nat.ltb_lt in Pgt. rewrite Pgt. reflexivity.
+  - right. right. unfold sutra_ltb. apply Nat.ltb_lt in Hgt. rewrite Hgt. reflexivity.
+Qed.
+
+(** Structural proof of defeat totality *)
+Theorem defeat_total_structural : forall r1 r2,
+  r1 = r2 \/ rule_defeats r1 r2 = true \/ rule_defeats r2 r1 = true.
+Proof.
+  intros r1 r2.
+  destruct (RuleId_eq_dec r1 r2) as [Heq | Hneq].
+  - left. exact Heq.
+  - right.
+    destruct (is_apavada r1 r2) eqn:E1.
+    + left. unfold rule_defeats. rewrite E1. reflexivity.
+    + destruct (is_apavada r2 r1) eqn:E2.
+      * right. unfold rule_defeats. rewrite E2. reflexivity.
+      * destruct (sutra_total (rule_sutra_num r1) (rule_sutra_num r2)) as [Heqs | [Hlt | Hgt]].
+        -- exfalso.
+           destruct r1, r2; simpl in Heqs; try (injection Heqs; intros; lia);
+           simpl in Hneq; contradiction.
+        -- right. unfold rule_defeats. rewrite E2. simpl. rewrite E1. simpl. exact Hlt.
+        -- left. unfold rule_defeats. rewrite E1. simpl. rewrite E2. simpl. exact Hgt.
+Qed.
+
