@@ -3502,14 +3502,3 @@ Proof. reflexivity. Qed.
 
 Example inverse_ar_valid : apply_ac_sandhi V_a V_r = [Svar V_a; Vyan C_r].
 Proof. reflexivity. Qed.
-
-(** * Part XXVIII: Version and Provenance *)
-
-(** Formalization version: 2.0 (with fixes)
-    Fixes applied:
-    - Śiva Sūtra 14 encoding (L is it-marker, not consonant)
-    - Non-circular soundness via independent rule_output_spec
-    - Unified external sandhi using full visarga logic
-    - Morphological boundary awareness
-    - External validation against traditional examples
-    - Inverse sandhi (sandhi-viccheda) framework *)
