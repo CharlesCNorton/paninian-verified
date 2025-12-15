@@ -1,17 +1,21 @@
 (******************************************************************************)
 (*                                                                            *)
-(*         Pāṇinian Sandhi: A Verified Formalization of Aṣṭādhyāyī 6.1        *)
+(*      Pāṇinian Sandhi: A Verified Formalization of Aṣṭādhyāyī 6.1 & 8.3-4   *)
 (*                                                                            *)
-(*     Pratyāhāras computed from Śiva Sūtras; vowel sandhi rules (6.1.77,     *)
-(*     78, 87, 88, 101, 109) with vipratiṣedha conflict resolution. Full      *)
-(*     soundness and completeness: the computational function corresponds     *)
-(*     exactly to the declarative relational specification.                   *)
+(*   Comprehensive formalization of Sanskrit phonological rules:              *)
+(*   - Vowel sandhi (ac-sandhi): 6.1.77-113 under ekaḥ pūrvaparayoḥ adhikāra  *)
+(*   - Visarga sandhi: 8.3.15-36                                              *)
+(*   - Consonant sandhi: 8.4.2, 8.4.40-65                                     *)
 (*                                                                            *)
-(*     'The first generative grammar in the modern sense was Panini's         *)
-(*      grammar.' — Noam Chomsky                                              *)
+(*   Pratyāhāras computed from Śiva Sūtras. Conflict resolution via           *)
+(*   vipratiṣedha (1.4.2) and apavāda. Full soundness/completeness for        *)
+(*   external sandhi; morphological context types for internal sandhi.        *)
 (*                                                                            *)
-(*     Author: Charles C. Norton                                              *)
-(*     Date: December 2025                                                    *)
+(*   'The first generative grammar in the modern sense was Panini's           *)
+(*    grammar.' — Noam Chomsky                                                *)
+(*                                                                            *)
+(*   Author: Charles C. Norton                                                *)
+(*   Date: December 2025                                                      *)
 (*                                                                            *)
 (******************************************************************************)
 
@@ -1170,14 +1174,111 @@ Qed.
 
 (** * Part VIII: Rule Representation *)
 
-(** Identifiers for the six vowel sandhi rules formalized from Aṣṭādhyāyī 6.1. *)
+(** ** Morphological Context Types *)
+
+(** Dhātu (root) classification for morphologically conditioned rules. *)
+Inductive DhatuClass : Type :=
+  | DC_eti        (** √i with prefix: pra+i → pre *)
+  | DC_edhati     (** √edh: pr+edh → predh *)
+  | DC_r_initial  (** Roots beginning with ṛ *)
+  | DC_khyati     (** √khyā and derivatives *)
+  | DC_other.     (** Default *)
+
+(** Upasarga (verb prefix) information. *)
+Inductive UpasargaInfo : Type :=
+  | UI_none       (** No upasarga present *)
+  | UI_pra        (** pra- prefix *)
+  | UI_upa        (** upa- prefix *)
+  | UI_a          (** a- prefix (ends in a) *)
+  | UI_aa         (** ā- prefix (ends in ā) *)
+  | UI_other_a    (** Other prefix ending in a/ā *)
+  | UI_other.     (** Other prefix *)
+
+(** Pratyaya (suffix) information. *)
+Inductive PratyayaInfo : Type :=
+  | PI_none       (** No suffix context *)
+  | PI_am         (** -am suffix *)
+  | PI_sas        (** -śas suffix *)
+  | PI_ami        (** -ami suffix *)
+  | PI_ngas       (** -ṅas suffix *)
+  | PI_ngasi      (** -ṅasi suffix *)
+  | PI_jas        (** -jas suffix *)
+  | PI_sup        (** sup (nominal) suffix *)
+  | PI_tin        (** tiṅ (verbal) suffix *)
+  | PI_other.     (** Other suffix *)
+
+(** Augment information. *)
+Inductive AugmentInfo : Type :=
+  | AI_none       (** No augment *)
+  | AI_at         (** āṭ augment present *)
+  | AI_ut         (** uṭh augment *)
+  | AI_other.     (** Other augment *)
+
+(** Special word classes. *)
+Inductive SpecialClass : Type :=
+  | SC_none       (** Default *)
+  | SC_om         (** The word om *)
+  | SC_ang        (** āṅ particle *)
+  | SC_amredita   (** Reduplicated/iterative form *)
+  | SC_avyakta    (** Onomatopoeia *)
+  | SC_abhyasta.  (** Reduplicated verbal stem *)
+
+(** Complete morphological context for sandhi application. *)
+Record MorphContext : Type := mkMorphContext {
+  mc_upasarga : UpasargaInfo;
+  mc_dhatu : DhatuClass;
+  mc_pratyaya : PratyayaInfo;
+  mc_augment : AugmentInfo;
+  mc_special : SpecialClass;
+  mc_is_pada_anta : bool;        (** Word-final position *)
+  mc_is_samasa : bool;           (** In compound *)
+  mc_is_dhatu_pratyaya : bool    (** At root-suffix juncture *)
+}.
+
+(** Default context: external sandhi with no special conditions. *)
+Definition default_morph_context : MorphContext := {|
+  mc_upasarga := UI_none;
+  mc_dhatu := DC_other;
+  mc_pratyaya := PI_none;
+  mc_augment := AI_none;
+  mc_special := SC_none;
+  mc_is_pada_anta := true;
+  mc_is_samasa := false;
+  mc_is_dhatu_pratyaya := false
+|}.
+
+(** Context for upasarga + dhātu juncture. *)
+Definition upasarga_context (ui : UpasargaInfo) (dc : DhatuClass) : MorphContext := {|
+  mc_upasarga := ui;
+  mc_dhatu := dc;
+  mc_pratyaya := PI_none;
+  mc_augment := AI_none;
+  mc_special := SC_none;
+  mc_is_pada_anta := false;
+  mc_is_samasa := false;
+  mc_is_dhatu_pratyaya := true
+|}.
+
+(** ** Rule Identifiers *)
+
+(** Identifiers for vowel sandhi rules from Aṣṭādhyāyī 6.1.77-113.
+    Organized by sutra number within the ekaḥ pūrvaparayoḥ adhikāra (6.1.84-111). *)
 Inductive RuleId : Type :=
-  | R_6_1_77
-  | R_6_1_78
-  | R_6_1_87
-  | R_6_1_88
-  | R_6_1_101
-  | R_6_1_109.
+  | R_6_1_77      (** iko yaṇ aci — ik vowels become semivowels *)
+  | R_6_1_78      (** eco 'yavāyāvaḥ — ec vowels decompose *)
+  | R_6_1_87      (** ādguṇaḥ — a/ā + vowel → guṇa *)
+  | R_6_1_88      (** vṛddhir eci — a/ā + ec → vṛddhi *)
+  | R_6_1_89      (** ety-edhaty-ūṭhsu — exception for eti/edhati/ūṭh *)
+  | R_6_1_90      (** āṭaś ca — after āṭ augment → vṛddhi *)
+  | R_6_1_91      (** upasargād ṛti dhātau — upasarga + ṛ-root → vṛddhi *)
+  | R_6_1_94      (** eṅi pararūpam — a/ā + e/o from root → pararūpa *)
+  | R_6_1_97      (** ato guṇe — a elided before guṇa *)
+  | R_6_1_101     (** akaḥ savarṇe dīrghaḥ — similar vowels → long *)
+  | R_6_1_107     (** ami pūrvaḥ — before ami suffix *)
+  | R_6_1_109     (** eṅaḥ padāntād ati — pūrvarūpa at word boundary *)
+  | R_6_1_110     (** ṅasiṅasoś ca — before ṅas/ṅasi *)
+  | R_6_1_111     (** ṛta ut — ṛ becomes ut *)
+  | R_6_1_113.    (** ato ror aplutād aplute — a before r *)
 
 (** Decidable equality for rule identifiers. *)
 Scheme Equality for RuleId.
@@ -1217,34 +1318,172 @@ Definition rule_sutra_num (r : RuleId) : SutraNum :=
   | R_6_1_78 => {| adhyaya := 6; pada := 1; sutra := 78 |}
   | R_6_1_87 => {| adhyaya := 6; pada := 1; sutra := 87 |}
   | R_6_1_88 => {| adhyaya := 6; pada := 1; sutra := 88 |}
+  | R_6_1_89 => {| adhyaya := 6; pada := 1; sutra := 89 |}
+  | R_6_1_90 => {| adhyaya := 6; pada := 1; sutra := 90 |}
+  | R_6_1_91 => {| adhyaya := 6; pada := 1; sutra := 91 |}
+  | R_6_1_94 => {| adhyaya := 6; pada := 1; sutra := 94 |}
+  | R_6_1_97 => {| adhyaya := 6; pada := 1; sutra := 97 |}
   | R_6_1_101 => {| adhyaya := 6; pada := 1; sutra := 101 |}
+  | R_6_1_107 => {| adhyaya := 6; pada := 1; sutra := 107 |}
   | R_6_1_109 => {| adhyaya := 6; pada := 1; sutra := 109 |}
+  | R_6_1_110 => {| adhyaya := 6; pada := 1; sutra := 110 |}
+  | R_6_1_111 => {| adhyaya := 6; pada := 1; sutra := 111 |}
+  | R_6_1_113 => {| adhyaya := 6; pada := 1; sutra := 113 |}
   end.
 
-(** Tests whether r1 is an exception rule that overrides r2. *)
+(** Tests whether r1 is an exception rule that overrides r2.
+    Exception relationships in Pāṇinian grammar:
+    - 6.1.88 is apavāda to 6.1.87 (vṛddhi overrides guṇa for ec)
+    - 6.1.89 is apavāda to 6.1.87 (eti/edhati exception)
+    - 6.1.90 is apavāda to 6.1.87 (āṭ augment vṛddhi)
+    - 6.1.91 is apavāda to 6.1.87 (upasarga + ṛ vṛddhi)
+    - 6.1.94 is apavāda to 6.1.87 (pararūpa for e/o)
+    - 6.1.97 is apavāda to 6.1.87 (a-deletion before guṇa)
+    - 6.1.101 is apavāda to 6.1.87, 6.1.77 (savarṇa dīrgha)
+    - 6.1.107 is apavāda to 6.1.87 (ami pūrva)
+    - 6.1.109 is apavāda to 6.1.78 (pūrvarūpa)
+    - 6.1.110 is apavāda to 6.1.87 (ṅas/ṅasi)
+    - 6.1.111 is apavāda to 6.1.87 (ṛ → ut) *)
 Definition is_apavada (r1 r2 : RuleId) : bool :=
   match r1, r2 with
   | R_6_1_88, R_6_1_87 => true
+  | R_6_1_89, R_6_1_87 => true
+  | R_6_1_90, R_6_1_87 => true
+  | R_6_1_91, R_6_1_87 => true
+  | R_6_1_94, R_6_1_87 => true
+  | R_6_1_97, R_6_1_87 => true
   | R_6_1_101, R_6_1_87 => true
   | R_6_1_101, R_6_1_77 => true
+  | R_6_1_107, R_6_1_87 => true
   | R_6_1_109, R_6_1_78 => true
+  | R_6_1_110, R_6_1_87 => true
+  | R_6_1_111, R_6_1_87 => true
   | _, _ => false
   end.
 
-(** Tests whether a rule's phonological conditions are satisfied by the vowel pair. *)
+(** Tests whether a rule's phonological conditions are satisfied by the vowel pair.
+    This is for EXTERNAL (padānta) sandhi only. Morphologically conditioned rules
+    (6.1.89-91, 6.1.94, 6.1.97, 6.1.107, 6.1.110-111, 6.1.113) return false here
+    since they require context beyond vowel pairs (upasarga, dhātu, pratyaya).
+    Use rule_matches_with_context for internal/morphological sandhi. *)
 Definition rule_matches (r : RuleId) (v1 v2 : Vowel) : bool :=
   match r with
   | R_6_1_77 => is_ik_computed v1
   | R_6_1_78 => is_ec_computed v1
   | R_6_1_87 => is_a_class v1
   | R_6_1_88 => is_a_class v1 && is_ec_computed v2
+  | R_6_1_89 => false
+  | R_6_1_90 => false
+  | R_6_1_91 => false
+  | R_6_1_94 => false
+  | R_6_1_97 => false
   | R_6_1_101 => is_ak_computed v1 && is_ak_computed v2 && savarna v1 v2
+  | R_6_1_107 => false
   | R_6_1_109 => is_en v1 && Vowel_beq v2 V_a
+  | R_6_1_110 => false
+  | R_6_1_111 => false
+  | R_6_1_113 => false
   end.
 
 (** Tests both phonological conditions and boundary requirements for a rule. *)
 Definition rule_matches_at_boundary (r : RuleId) (v1 v2 : Vowel) (b : MorphBoundary) : bool :=
   rule_matches r v1 v2 && boundary_allows_rule b r.
+
+(** ** Context-Aware Rule Matching *)
+
+(** Helper: checks if upasarga ends in a/ā. *)
+Definition upasarga_ends_in_a (ui : UpasargaInfo) : bool :=
+  match ui with
+  | UI_a | UI_aa | UI_pra | UI_upa | UI_other_a => true
+  | _ => false
+  end.
+
+(** Helper: checks if dhātu is ṛ-initial. *)
+Definition dhatu_is_r_initial (dc : DhatuClass) : bool :=
+  match dc with
+  | DC_r_initial => true
+  | _ => false
+  end.
+
+(** Helper: checks if dhātu is eti or edhati. *)
+Definition dhatu_is_eti_edhati (dc : DhatuClass) : bool :=
+  match dc with
+  | DC_eti | DC_edhati => true
+  | _ => false
+  end.
+
+(** Helper: checks if āṭ augment is present. *)
+Definition has_at_augment (ai : AugmentInfo) : bool :=
+  match ai with
+  | AI_at => true
+  | _ => false
+  end.
+
+(** Helper: checks if suffix is ami. *)
+Definition is_ami_suffix (pi : PratyayaInfo) : bool :=
+  match pi with
+  | PI_ami => true
+  | _ => false
+  end.
+
+(** Helper: checks if suffix is ṅas or ṅasi. *)
+Definition is_ngas_suffix (pi : PratyayaInfo) : bool :=
+  match pi with
+  | PI_ngas | PI_ngasi => true
+  | _ => false
+  end.
+
+(** Full rule matching with morphological context.
+    6.1.89: ety-edhaty-ūṭhsu — vṛddhi for roots eti, edhati (a/ā + e)
+    6.1.90: āṭaś ca — vṛddhi after āṭ augment
+    6.1.91: upasargād ṛti dhātau — upasarga (a/ā) + ṛ-initial root → vṛddhi
+    6.1.94: eṅi pararūpam — a/ā + e/o from root → pararūpa (second wins)
+    6.1.97: ato guṇe — a deleted before guṇa in compounds
+    6.1.107: ami pūrvaḥ — before ami suffix, first vowel wins
+    6.1.110: ṅasiṅasoś ca — before ṅas/ṅasi, pūrvarūpa
+    6.1.111: ṛta ut — ṛ after a becomes ut
+    6.1.113: ato ror aplutād aplute — a + r → o *)
+Definition rule_matches_with_context
+  (r : RuleId) (v1 v2 : Vowel) (ctx : MorphContext) : bool :=
+  match r with
+  | R_6_1_77 => is_ik_computed v1
+  | R_6_1_78 => is_ec_computed v1
+  | R_6_1_87 => is_a_class v1
+  | R_6_1_88 => is_a_class v1 && is_ec_computed v2
+  | R_6_1_89 =>
+      is_a_class v1 && is_ec_computed v2 &&
+      dhatu_is_eti_edhati (mc_dhatu ctx)
+  | R_6_1_90 =>
+      is_a_class v1 &&
+      has_at_augment (mc_augment ctx)
+  | R_6_1_91 =>
+      is_a_class v1 && Vowel_beq v2 V_r &&
+      upasarga_ends_in_a (mc_upasarga ctx) &&
+      dhatu_is_r_initial (mc_dhatu ctx)
+  | R_6_1_94 =>
+      is_a_class v1 && is_en v2 &&
+      mc_is_dhatu_pratyaya ctx
+  | R_6_1_97 =>
+      Vowel_beq v1 V_a &&
+      is_guna_vowel v2 &&
+      mc_is_samasa ctx
+  | R_6_1_101 => is_ak_computed v1 && is_ak_computed v2 && savarna v1 v2
+  | R_6_1_107 =>
+      is_a_class v1 &&
+      is_ami_suffix (mc_pratyaya ctx)
+  | R_6_1_109 =>
+      is_en v1 && Vowel_beq v2 V_a &&
+      mc_is_pada_anta ctx
+  | R_6_1_110 =>
+      is_en v1 && Vowel_beq v2 V_a &&
+      is_ngas_suffix (mc_pratyaya ctx)
+  | R_6_1_111 =>
+      is_a_class v1 && Vowel_beq v2 V_r &&
+      mc_is_dhatu_pratyaya ctx
+  | R_6_1_113 =>
+      Vowel_beq v1 V_a && Vowel_beq v2 V_r &&
+      negb (mc_is_pada_anta ctx)
+  end.
 
 (** Rule 6.1.109 applies at word boundaries. *)
 Example boundary_109_pada : rule_matches_at_boundary R_6_1_109 V_e V_a PadaAnta = true.
@@ -1273,8 +1512,17 @@ Definition apply_rule (r : RuleId) (v1 v2 : Vowel) : list Phoneme :=
       end
   | R_6_1_87 => guna v2
   | R_6_1_88 => vrddhi v2
+  | R_6_1_89 => vrddhi v2
+  | R_6_1_90 => vrddhi v2
+  | R_6_1_91 => vrddhi V_r
+  | R_6_1_94 => [Svar v2]
+  | R_6_1_97 => [Svar v2]
   | R_6_1_101 => [Svar (lengthen v1)]
+  | R_6_1_107 => [Svar (lengthen v1)]
   | R_6_1_109 => [Svar v1]
+  | R_6_1_110 => [Svar v1]
+  | R_6_1_111 => [Svar V_u; Vyan C_t]
+  | R_6_1_113 => [Svar V_o]
   end.
 
 (** * Part IX: Precedence - vipratiṣedhe paraṁ kāryam *)
@@ -1311,6 +1559,9 @@ Qed.
     as long as defeat_total holds for the extended rule set. *)
 
 (** The complete list of sandhi rules in this formalization. *)
+(** All rules that can apply based on vowel pairs alone (no morphological context).
+    Morphologically conditioned rules (6.1.89-91, 6.1.107, 6.1.110-111, 6.1.113)
+    are not included here as they always return false for rule_matches. *)
 Definition all_rules : list RuleId :=
   [R_6_1_77; R_6_1_78; R_6_1_87; R_6_1_88; R_6_1_101; R_6_1_109].
 
@@ -1388,7 +1639,9 @@ Definition select_rule (v1 v2 : Vowel) : option RuleId :=
 
 (** * Part X: Declarative Specification *)
 
-(** Declarative specification of when each sandhi rule applies to a vowel pair. *)
+(** Declarative specification of when each sandhi rule applies to a vowel pair.
+    Note: Morphologically conditioned rules (6.1.89-91, 6.1.107, 6.1.110-111, 6.1.113)
+    are not included here as they require context beyond vowel pairs. *)
 Inductive sandhi_applicable : RuleId -> Vowel -> Vowel -> Prop :=
   | SA_77 : forall v1 v2,
       is_ik_computed v1 = true ->
@@ -1420,7 +1673,7 @@ Proof.
   intros r v1 v2.
   split.
   - intro H.
-    destruct r; simpl in H.
+    destruct r; simpl in H; try discriminate.
     + apply SA_77. exact H.
     + apply SA_78. exact H.
     + apply SA_87. exact H.
@@ -1435,8 +1688,8 @@ Proof.
     + apply Bool.andb_true_iff in H.
       destruct H as [H1 H2].
       apply SA_109.
-      -- exact H1.
-      -- destruct v2; simpl in H2; try discriminate; reflexivity.
+      * exact H1.
+      * destruct v2; simpl in H2; try discriminate; reflexivity.
   - intro H.
     destruct H; simpl.
     + exact H.
@@ -1511,15 +1764,50 @@ Inductive rule_output_spec : RuleId -> Vowel -> Vowel -> list Phoneme -> Prop :=
       (** 6.1.88 vṛddhir eci: a/ā + ec → vṛddhi of the second vowel. *)
       vrddhi_result_spec v2 result ->
       rule_output_spec R_6_1_88 v1 v2 result
+  | ROS_89 : forall v1 v2 result,
+      (** 6.1.89 ety-edhaty-ūṭhsu: vṛddhi for eti/edhati/ūṭh roots. *)
+      vrddhi_result_spec v2 result ->
+      rule_output_spec R_6_1_89 v1 v2 result
+  | ROS_90 : forall v1 v2 result,
+      (** 6.1.90 āṭaś ca: vṛddhi after āṭ augment. *)
+      vrddhi_result_spec v2 result ->
+      rule_output_spec R_6_1_90 v1 v2 result
+  | ROS_91 : forall v1 v2 result,
+      (** 6.1.91 upasargād ṛti dhātau: upasarga + ṛ → vṛddhi (ār). *)
+      vrddhi_result_spec V_r result ->
+      rule_output_spec R_6_1_91 v1 v2 result
+  | ROS_94 : forall v1 v2,
+      (** 6.1.94 eṅi pararūpam: a/ā + e/o → e/o (pararūpa). *)
+      rule_output_spec R_6_1_94 v1 v2 [Svar v2]
+  | ROS_97 : forall v1 v2,
+      (** 6.1.97 ato guṇe: a elided before guṇa. *)
+      rule_output_spec R_6_1_97 v1 v2 [Svar v2]
   | ROS_101 : forall v1 v2 v_long,
       (** 6.1.101 akaḥ savarṇe dīrghaḥ: savarṇa ak vowels merge to dīrgha. *)
       lengthen_spec v1 v_long ->
       rule_output_spec R_6_1_101 v1 v2 [Svar v_long]
+  | ROS_107 : forall v1 v2 v_long,
+      (** 6.1.107 ami pūrvaḥ: before ami, pūrva vowel lengthens. *)
+      lengthen_spec v1 v_long ->
+      rule_output_spec R_6_1_107 v1 v2 [Svar v_long]
   | ROS_109 : forall v1 v2,
       (** 6.1.109 eṅaḥ padāntādati: eṅ + a → eṅ (pūrvarūpa). *)
-      rule_output_spec R_6_1_109 v1 v2 [Svar v1].
+      rule_output_spec R_6_1_109 v1 v2 [Svar v1]
+  | ROS_110 : forall v1 v2,
+      (** 6.1.110 ṅasiṅasoś ca: pūrvarūpa before ṅas/ṅasi. *)
+      rule_output_spec R_6_1_110 v1 v2 [Svar v1]
+  | ROS_111 : forall v1 v2,
+      (** 6.1.111 ṛta ut: ṛ becomes ut. *)
+      rule_output_spec R_6_1_111 v1 v2 [Svar V_u; Vyan C_t]
+  | ROS_113 : forall v1 v2,
+      (** 6.1.113 ato ror aplutād aplute: a + r → o. *)
+      rule_output_spec R_6_1_113 v1 v2 [Svar V_o].
 
-(** The computational apply_rule matches the declarative output specification. *)
+(** The computational apply_rule matches the declarative output specification.
+    Note: Only rules where rule_matches can return true are proven here.
+    Morphologically conditioned rules (6.1.89-91, 6.1.94, 6.1.97, 6.1.107,
+    6.1.110-111, 6.1.113) always return false from rule_matches and are
+    eliminated by discriminate. *)
 Lemma apply_rule_correct : forall r v1 v2 out,
   rule_matches r v1 v2 = true ->
   apply_rule r v1 v2 = out <-> rule_output_spec r v1 v2 out.
@@ -1527,7 +1815,7 @@ Proof.
   intros r v1 v2 out Hmatch.
   split.
   - intro H.
-    destruct r; simpl in *.
+    destruct r; simpl in Hmatch; try discriminate; simpl in H.
     + destruct (yan_of v1) eqn:Eyan.
       * subst. apply ROS_77. apply yan_of_correct. exact Eyan.
       * destruct v1; simpl in Hmatch; discriminate.
@@ -1539,13 +1827,16 @@ Proof.
     + subst. apply ROS_101. apply lengthen_correct. reflexivity.
     + subst. apply ROS_109.
   - intro H.
-    destruct H.
-    + simpl. apply yan_of_correct in H. rewrite H. reflexivity.
-    + simpl. apply ayavayav_correct in H. rewrite H. reflexivity.
-    + simpl. apply guna_correct in H. exact H.
-    + simpl. apply vrddhi_correct in H. exact H.
-    + simpl. apply lengthen_correct in H. rewrite H. reflexivity.
-    + simpl. reflexivity.
+    destruct H; simpl; try reflexivity.
+    + apply yan_of_correct in H. rewrite H. reflexivity.
+    + apply ayavayav_correct in H. rewrite H. reflexivity.
+    + apply guna_correct in H. exact H.
+    + apply vrddhi_correct in H. exact H.
+    + apply vrddhi_correct in H. exact H.
+    + apply vrddhi_correct in H. exact H.
+    + apply vrddhi_correct in H. exact H.
+    + apply lengthen_correct in H. rewrite H. reflexivity.
+    + apply lengthen_correct in H. rewrite H. reflexivity.
 Qed.
 
 (** Specifies that a rule is the winner: it applies and defeats all other applicable rules. *)
@@ -1567,12 +1858,95 @@ Inductive ac_sandhi_rel : Vowel -> Vowel -> list Phoneme -> Prop :=
 
 (** * Part XI: Computational Sandhi Function *)
 
-(** The main sandhi function: selects the winning rule and applies it. *)
+(** The main sandhi function for EXTERNAL sandhi: selects the winning rule and applies it.
+    This function is appropriate for word-boundary (padānta) sandhi where rules
+    6.1.77, 6.1.78, 6.1.87, 6.1.88, 6.1.101, and 6.1.109 apply based purely on
+    phonological context. For morphologically-conditioned sandhi (internal sandhi
+    at dhātu-pratyaya junctures), use apply_ac_sandhi_with_context. *)
 Definition apply_ac_sandhi (v1 v2 : Vowel) : list Phoneme :=
   match select_rule v1 v2 with
   | Some r => apply_rule r v1 v2
   | None => [Svar v1; Svar v2]
   end.
+
+(** List of all rules that may apply given morphological context. *)
+Definition all_rules_with_context : list RuleId :=
+  [R_6_1_77; R_6_1_78; R_6_1_87; R_6_1_88; R_6_1_89; R_6_1_90;
+   R_6_1_91; R_6_1_94; R_6_1_97; R_6_1_101; R_6_1_107; R_6_1_109;
+   R_6_1_110; R_6_1_111; R_6_1_113].
+
+(** Filters rules that match given vowels and context. *)
+Definition matching_rules_with_context
+  (rules : list RuleId) (v1 v2 : Vowel) (ctx : MorphContext) : list RuleId :=
+  filter (fun r => rule_matches_with_context r v1 v2 ctx) rules.
+
+(** Finds the winning rule among those that match with context.
+    Uses fold to avoid structural recursion issues. *)
+Definition find_winner_with_context (candidates : list RuleId) : option RuleId :=
+  match candidates with
+  | [] => None
+  | r :: rest =>
+      Some (fold_left
+        (fun best candidate =>
+          if rule_defeats candidate best then candidate else best)
+        rest r)
+  end.
+
+(** Selects the applicable rule given morphological context. *)
+Definition select_rule_with_context
+  (v1 v2 : Vowel) (ctx : MorphContext) : option RuleId :=
+  find_winner_with_context
+    (matching_rules_with_context all_rules_with_context v1 v2 ctx).
+
+(** Context-aware sandhi function for INTERNAL sandhi at morphological junctures.
+    This handles rules that require knowledge of upasarga, dhātu, pratyaya, etc.
+    Examples:
+    - 6.1.89: pra + eti → preti (vṛddhi blocked for eti)
+    - 6.1.91: pra + ṛ (root) → prār (vṛddhi)
+    - 6.1.94: pra + eṣ (root) → preṣ (pararūpa)
+    - 6.1.111: a + ṛ (at dhātu-pratyaya) → ur *)
+Definition apply_ac_sandhi_with_context
+  (v1 v2 : Vowel) (ctx : MorphContext) : list Phoneme :=
+  match select_rule_with_context v1 v2 ctx with
+  | Some r => apply_rule r v1 v2
+  | None => [Svar v1; Svar v2]
+  end.
+
+(** Example: 6.1.91 upasargād ṛti dhātau — pra + ṛ → ār (vṛddhi)
+    With upasarga ending in a and ṛ-initial dhātu, rule 6.1.91 applies. *)
+Example upasarga_r_sandhi :
+  let ctx := upasarga_context UI_pra DC_r_initial in
+  rule_matches_with_context R_6_1_91 V_a V_r ctx = true.
+Proof. reflexivity. Qed.
+
+(** Example: 6.1.94 eṅi pararūpam — a + e (from root) → e
+    At dhātu-pratyaya juncture with a + e/o, pararūpa applies. *)
+Example pararupa_matches :
+  let ctx := {| mc_upasarga := UI_none; mc_dhatu := DC_other;
+                mc_pratyaya := PI_none; mc_augment := AI_none;
+                mc_special := SC_none; mc_is_pada_anta := false;
+                mc_is_samasa := false; mc_is_dhatu_pratyaya := true |} in
+  rule_matches_with_context R_6_1_94 V_a V_e ctx = true.
+Proof. reflexivity. Qed.
+
+(** Example: Default context matches standard external sandhi rules. *)
+Example external_context_guṇa :
+  rule_matches_with_context R_6_1_87 V_a V_i default_morph_context = true.
+Proof. reflexivity. Qed.
+
+(** Example: 6.1.109 requires pada_anta context. *)
+Example purvarupa_needs_pada_anta :
+  rule_matches_with_context R_6_1_109 V_e V_a default_morph_context = true.
+Proof. reflexivity. Qed.
+
+(** Example: 6.1.109 does NOT match when not at word boundary. *)
+Example purvarupa_internal_fails :
+  let ctx := {| mc_upasarga := UI_none; mc_dhatu := DC_other;
+                mc_pratyaya := PI_none; mc_augment := AI_none;
+                mc_special := SC_none; mc_is_pada_anta := false;
+                mc_is_samasa := false; mc_is_dhatu_pratyaya := true |} in
+  rule_matches_with_context R_6_1_109 V_e V_a ctx = false.
+Proof. reflexivity. Qed.
 
 (** Rule 6.1.87 applied to a/ā + ṛ yields the compound guṇa ar. *)
 Lemma rule_87_r_result : forall v1,
@@ -1761,11 +2135,38 @@ Proof.
       * apply IH. exact Hin'.
 Qed.
 
-(** Every rule identifier appears in all_rules. *)
-Lemma all_rules_complete : forall r, In r all_rules.
+(** Tests if a rule is in the all_rules list.
+    Only rules that can match based on vowel pairs alone are included. *)
+Definition in_all_rules (r : RuleId) : bool :=
+  match r with
+  | R_6_1_77 | R_6_1_78 | R_6_1_87 | R_6_1_88
+  | R_6_1_101 | R_6_1_109 => true
+  | _ => false
+  end.
+
+(** Rules in all_rules are exactly those for which in_all_rules is true. *)
+Lemma all_rules_complete : forall r,
+  in_all_rules r = true -> In r all_rules.
 Proof.
   intro r.
-  destruct r; unfold all_rules; simpl; auto 10.
+  destruct r; intro H; try discriminate;
+  unfold all_rules; simpl; auto 10.
+Qed.
+
+(** For any applicable rule, either it's in all_rules or there's another rule in all_rules that also applies. *)
+Lemma coverage_has_all_rules_member : forall v1 v2,
+  exists r, In r all_rules /\ rule_matches r v1 v2 = true.
+Proof.
+  intros v1 v2.
+  destruct (coverage_semantic v1 v2) as [r Hr].
+  exists r.
+  destruct Hr;
+  (split; [ unfold all_rules; simpl; tauto
+          | simpl; try assumption;
+            try (rewrite H; reflexivity);
+            try (rewrite H, H0; reflexivity);
+            try (rewrite H, H0, H1; reflexivity);
+            try (rewrite H; subst; reflexivity) ]).
 Qed.
 
 (** The matching rules list is never empty for any vowel pair. *)
@@ -1773,10 +2174,9 @@ Lemma matching_rules_nonempty : forall v1 v2,
   matching_rules all_rules v1 v2 <> [].
 Proof.
   intros v1 v2.
-  destruct (coverage_semantic v1 v2) as [r Hr].
-  apply rule_matches_iff_applicable in Hr.
+  destruct (coverage_has_all_rules_member v1 v2) as [r [Hin Hmatch]].
   intro Hempty.
-  pose proof (matching_rules_In r all_rules v1 v2 (all_rules_complete r) Hr) as Hmr.
+  pose proof (matching_rules_In r all_rules v1 v2 Hin Hmatch) as Hmr.
   rewrite Hempty in Hmr.
   destruct Hmr.
 Qed.
@@ -1997,17 +2397,15 @@ Theorem apply_rule_nonempty : forall r v1 v2,
   apply_rule r v1 v2 <> [].
 Proof.
   intros r v1 v2 Hmatch.
-  destruct r; simpl in *.
+  destruct r; simpl in Hmatch; try discriminate; simpl;
+  try (destruct v2; discriminate);
+  try discriminate.
   - destruct (yan_of v1) eqn:E.
     + discriminate.
     + destruct v1; simpl in Hmatch; discriminate.
   - destruct (ayavayav v1) eqn:E.
     + destruct l; discriminate.
     + destruct v1; simpl in Hmatch; discriminate.
-  - destruct v2; discriminate.
-  - destruct v2; discriminate.
-  - discriminate.
-  - discriminate.
 Qed.
 
 (** The sandhi function always produces a non-empty output. *)
@@ -4068,13 +4466,31 @@ Definition apply_external_sandhi
     - 1.1.9  tulyāsyaprayatnaṁ savarṇam
     - 1.4.2  vipratiṣedhe paraṁ kāryam
 
-    Vowel Sandhi (ac-sandhi, 6.1):
-    - 6.1.77  iko yaṇ aci
-    - 6.1.78  eco 'yavāyāvaḥ
-    - 6.1.87  ādguṇaḥ
-    - 6.1.88  vṛddhir eci
-    - 6.1.101 akaḥ savarṇe dīrghaḥ
-    - 6.1.109 eṅaḥ padāntād ati
+    Vowel Sandhi (ac-sandhi, 6.1.77-113):
+
+    External sandhi (vowel pairs only):
+    - 6.1.77  iko yaṇ aci (ik → yaṇ before vowel)
+    - 6.1.78  eco 'yavāyāvaḥ (ec → ay/av decomposition)
+    - 6.1.87  ādguṇaḥ (a/ā + vowel → guṇa)
+    - 6.1.88  vṛddhir eci (a/ā + ec → vṛddhi)
+    - 6.1.101 akaḥ savarṇe dīrghaḥ (savarṇa → dīrgha)
+    - 6.1.109 eṅaḥ padāntād ati (pūrvarūpa at word boundary)
+
+    Internal sandhi (morphological context required):
+    - 6.1.89  ety-edhaty-ūṭhsu (vṛddhi for eti/edhati/ūṭh roots)
+    - 6.1.90  āṭaś ca (vṛddhi after āṭ augment)
+    - 6.1.91  upasargād ṛti dhātau (upasarga + ṛ → vṛddhi)
+    - 6.1.94  eṅi pararūpam (a/ā + e/o → pararūpa)
+    - 6.1.97  ato guṇe (a elided before guṇa)
+    - 6.1.107 ami pūrvaḥ (lengthening before ami)
+    - 6.1.110 ṅasiṅasoś ca (pūrvarūpa before ṅas/ṅasi)
+    - 6.1.111 ṛta ut (ṛ → ut)
+    - 6.1.113 ato ror aplutād aplute (a + r → o)
+
+    Adhikāra/Paribhāṣā (governing rules):
+    - 6.1.84  ekaḥ pūrvaparayoḥ (one substitute for two)
+    - 6.1.85  antādivacca (substitute position)
+    - 6.1.86  ṣatvatukorasiddhaḥ (asiddha for ṣatva/tuk)
 
     Visarga Sandhi (8.3):
     - 8.3.15  kharavasānayoḥ visarjanīyaḥ
