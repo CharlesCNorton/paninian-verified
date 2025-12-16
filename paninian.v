@@ -27,13 +27,13 @@ Set Implicit Arguments.
 
 (** * Part I: Phoneme Inventory *)
 
-(** V = {a, ā, i, ī, u, ū, ṛ, ṝ, ḷ, e, ai, o, au} — the 13 Sanskrit vowels. *)
+(** V = {a, ā, i, ī, u, ū, ṛ, ṝ, ḷ, ḹ, e, ai, o, au} — the 14 Sanskrit vowels. *)
 Inductive Vowel : Type :=
   | V_a | V_aa
   | V_i | V_ii
   | V_u | V_uu
   | V_r | V_rr
-  | V_l
+  | V_l | V_ll
   | V_e | V_ai
   | V_o | V_au.
 
@@ -267,13 +267,14 @@ Definition is_jhas_computed (c : Consonant) : bool :=
 Definition is_khar_computed (c : Consonant) : bool :=
   in_pratyahara_consonant c C_kh 13.
 
-(** short : V → V — maps long vowels to short: ā↦a, ī↦i, ū↦u, ṝ↦ṛ. *)
+(** short : V → V — maps long vowels to short: ā↦a, ī↦i, ū↦u, ṝ↦ṛ, ḹ↦ḷ. *)
 Definition short_of (v : Vowel) : Vowel :=
   match v with
   | V_aa => V_a
   | V_ii => V_i
   | V_uu => V_u
   | V_rr => V_r
+  | V_ll => V_l
   | other => other
   end.
 
@@ -415,7 +416,7 @@ Inductive is_ac_spec : Vowel -> Prop :=
   | AC_i : is_ac_spec V_i   | AC_ii : is_ac_spec V_ii
   | AC_u : is_ac_spec V_u   | AC_uu : is_ac_spec V_uu
   | AC_r : is_ac_spec V_r   | AC_rr : is_ac_spec V_rr
-  | AC_l : is_ac_spec V_l
+  | AC_l : is_ac_spec V_l   | AC_ll : is_ac_spec V_ll
   | AC_e : is_ac_spec V_e   | AC_ai : is_ac_spec V_ai
   | AC_o : is_ac_spec V_o   | AC_au : is_ac_spec V_au.
 
@@ -423,12 +424,12 @@ Inductive is_ac_spec : Vowel -> Prop :=
 Lemma is_ac_spec_total : forall v, is_ac_spec v.
 Proof. destruct v; constructor. Qed.
 
-(** ik_spec = {i, ī, u, ū, ṛ, ṝ, ḷ} — declarative ik specification. *)
+(** ik_spec = {i, ī, u, ū, ṛ, ṝ, ḷ, ḹ} — declarative ik specification. *)
 Inductive is_ik_spec : Vowel -> Prop :=
   | IK_i : is_ik_spec V_i   | IK_ii : is_ik_spec V_ii
   | IK_u : is_ik_spec V_u   | IK_uu : is_ik_spec V_uu
   | IK_r : is_ik_spec V_r   | IK_rr : is_ik_spec V_rr
-  | IK_l : is_ik_spec V_l.
+  | IK_l : is_ik_spec V_l   | IK_ll : is_ik_spec V_ll.
 
 (** ik?(v) = true ⟺ is_ik_spec(v) — computational/declarative equivalence. *)
 Lemma is_ik_correct : forall v,
@@ -439,13 +440,13 @@ Proof.
   - intro H; destruct H; reflexivity.
 Qed.
 
-(** ak_spec = {a, ā, i, ī, u, ū, ṛ, ṝ, ḷ} — declarative ak specification. *)
+(** ak_spec = {a, ā, i, ī, u, ū, ṛ, ṝ, ḷ, ḹ} — declarative ak specification. *)
 Inductive is_ak_spec : Vowel -> Prop :=
   | AK_a : is_ak_spec V_a   | AK_aa : is_ak_spec V_aa
   | AK_i : is_ak_spec V_i   | AK_ii : is_ak_spec V_ii
   | AK_u : is_ak_spec V_u   | AK_uu : is_ak_spec V_uu
   | AK_r : is_ak_spec V_r   | AK_rr : is_ak_spec V_rr
-  | AK_l : is_ak_spec V_l.
+  | AK_l : is_ak_spec V_l   | AK_ll : is_ak_spec V_ll.
 
 (** ak?(v) = true ⟺ is_ak_spec(v) — computational/declarative equivalence. *)
 Lemma is_ak_correct : forall v,
@@ -480,6 +481,7 @@ Proof.
   destruct v.
   - left; left; reflexivity.
   - left; right; reflexivity.
+  - right; left; constructor.
   - right; left; constructor.
   - right; left; constructor.
   - right; left; constructor.
@@ -615,21 +617,23 @@ Proof.
     destruct H; reflexivity.
 Qed.
 
-(** guṇa_ṛḷ ⊆ V × P* — compound guṇa for syllabic liquids: ṛ,ṝ↦ar, ḷ↦al. *)
+(** guṇa_ṛḷ ⊆ V × P* — compound guṇa for syllabic liquids: ṛ,ṝ↦ar, ḷ,ḹ↦al. *)
 Inductive guna_r_spec : Vowel -> list Phoneme -> Prop :=
   | GRS_r : guna_r_spec V_r [Svar V_a; Vyan C_r]
   | GRS_rr : guna_r_spec V_rr [Svar V_a; Vyan C_r]
-  | GRS_l : guna_r_spec V_l [Svar V_a; Vyan C_l].
+  | GRS_l : guna_r_spec V_l [Svar V_a; Vyan C_l]
+  | GRS_ll : guna_r_spec V_ll [Svar V_a; Vyan C_l].
 
-(** vṛddhi_ṛḷ ⊆ V × P* — compound vṛddhi for syllabic liquids: ṛ,ṝ↦ār, ḷ↦āl. *)
+(** vṛddhi_ṛḷ ⊆ V × P* — compound vṛddhi for syllabic liquids: ṛ,ṝ↦ār, ḷ,ḹ↦āl. *)
 Inductive vrddhi_r_spec : Vowel -> list Phoneme -> Prop :=
   | VRS_r : vrddhi_r_spec V_r [Svar V_aa; Vyan C_r]
   | VRS_rr : vrddhi_r_spec V_rr [Svar V_aa; Vyan C_r]
-  | VRS_l : vrddhi_r_spec V_l [Svar V_aa; Vyan C_l].
+  | VRS_l : vrddhi_r_spec V_l [Svar V_aa; Vyan C_l]
+  | VRS_ll : vrddhi_r_spec V_ll [Svar V_aa; Vyan C_l].
 
 (** * Part IV: Savarṇa (1.1.9) *)
 
-(** [v] = V/≈ — savarṇa equivalence classes: {a,ā}, {i,ī}, {u,ū}, {ṛ,ṝ}, {ḷ}, {e}, {ai}, {o}, {au}. *)
+(** [v] = V/≈ — savarṇa equivalence classes: {a,ā}, {i,ī}, {u,ū}, {ṛ,ṝ}, {ḷ,ḹ}, {e}, {ai}, {o}, {au}. *)
 Inductive SavarnaClass : Type :=
   | SC_a | SC_i | SC_u | SC_r | SC_l | SC_e | SC_ai | SC_o | SC_au.
 
@@ -640,7 +644,7 @@ Definition savarna_class (v : Vowel) : SavarnaClass :=
   | V_i | V_ii => SC_i
   | V_u | V_uu => SC_u
   | V_r | V_rr => SC_r
-  | V_l => SC_l
+  | V_l | V_ll => SC_l
   | V_e => SC_e
   | V_ai => SC_ai
   | V_o => SC_o
@@ -689,6 +693,9 @@ Inductive savarna_spec : Vowel -> Vowel -> Prop :=
   | Sav_rr_r : savarna_spec V_rr V_r
   | Sav_rr_rr : savarna_spec V_rr V_rr
   | Sav_l_l : savarna_spec V_l V_l
+  | Sav_l_ll : savarna_spec V_l V_ll
+  | Sav_ll_l : savarna_spec V_ll V_l
+  | Sav_ll_ll : savarna_spec V_ll V_ll
   | Sav_e_e : savarna_spec V_e V_e
   | Sav_ai_ai : savarna_spec V_ai V_ai
   | Sav_o_o : savarna_spec V_o V_o
@@ -725,41 +732,42 @@ Qed.
 
 (** * Part V: Guṇa and Vṛddhi (1.1.1-2) *)
 
-(** guṇa : V → P⁺ — guṇa grade: a,ā↦a; i,ī↦e; u,ū↦o; ṛ,ṝ↦ar; ḷ↦al. *)
+(** guṇa : V → P⁺ — guṇa grade: a,ā↦a; i,ī↦e; u,ū↦o; ṛ,ṝ↦ar; ḷ,ḹ↦al. *)
 Definition guna (v : Vowel) : list Phoneme :=
   match v with
   | V_a | V_aa => [Svar V_a]
   | V_i | V_ii => [Svar V_e]
   | V_u | V_uu => [Svar V_o]
   | V_r | V_rr => [Svar V_a; Vyan C_r]
-  | V_l => [Svar V_a; Vyan C_l]
+  | V_l | V_ll => [Svar V_a; Vyan C_l]
   | V_e => [Svar V_e]
   | V_o => [Svar V_o]
   | V_ai => [Svar V_ai]
   | V_au => [Svar V_au]
   end.
 
-(** vṛddhi : V → P⁺ — vṛddhi grade: a,ā↦ā; i,ī↦ai; u,ū↦au; ṛ,ṝ↦ār; ḷ↦āl. *)
+(** vṛddhi : V → P⁺ — vṛddhi grade: a,ā↦ā; i,ī↦ai; u,ū↦au; ṛ,ṝ↦ār; ḷ,ḹ↦āl. *)
 Definition vrddhi (v : Vowel) : list Phoneme :=
   match v with
   | V_a | V_aa => [Svar V_aa]
   | V_i | V_ii => [Svar V_ai]
   | V_u | V_uu => [Svar V_au]
   | V_r | V_rr => [Svar V_aa; Vyan C_r]
-  | V_l => [Svar V_aa; Vyan C_l]
+  | V_l | V_ll => [Svar V_aa; Vyan C_l]
   | V_e => [Svar V_ai]
   | V_o => [Svar V_au]
   | V_ai => [Svar V_ai]
   | V_au => [Svar V_au]
   end.
 
-(** dīrgha : V → V — lengthening: a↦ā, i↦ī, u↦ū, ṛ↦ṝ; others fixed. *)
+(** dīrgha : V → V — lengthening: a↦ā, i↦ī, u↦ū, ṛ↦ṝ, ḷ↦ḹ; others fixed. *)
 Definition lengthen (v : Vowel) : Vowel :=
   match v with
   | V_a => V_aa
   | V_i => V_ii
   | V_u => V_uu
   | V_r => V_rr
+  | V_l => V_ll
   | other => other
   end.
 
@@ -773,7 +781,8 @@ Inductive lengthen_spec : Vowel -> Vowel -> Prop :=
   | Len_uu : lengthen_spec V_uu V_uu
   | Len_r : lengthen_spec V_r V_rr
   | Len_rr : lengthen_spec V_rr V_rr
-  | Len_l : lengthen_spec V_l V_l
+  | Len_l : lengthen_spec V_l V_ll
+  | Len_ll : lengthen_spec V_ll V_ll
   | Len_e : lengthen_spec V_e V_e
   | Len_ai : lengthen_spec V_ai V_ai
   | Len_o : lengthen_spec V_o V_o
@@ -803,6 +812,7 @@ Inductive guna_result_spec : Vowel -> list Phoneme -> Prop :=
   | GR_r : guna_result_spec V_r [Svar V_a; Vyan C_r]
   | GR_rr : guna_result_spec V_rr [Svar V_a; Vyan C_r]
   | GR_l : guna_result_spec V_l [Svar V_a; Vyan C_l]
+  | GR_ll : guna_result_spec V_ll [Svar V_a; Vyan C_l]
   | GR_e : guna_result_spec V_e [Svar V_e]
   | GR_o : guna_result_spec V_o [Svar V_o]
   | GR_ai : guna_result_spec V_ai [Svar V_ai]
@@ -825,13 +835,13 @@ Proof.
   intro v; destruct v; simpl; auto.
 Qed.
 
-(** |guṇa(v)| = 2 ⟺ v ∈ {ṛ, ṝ, ḷ} — compound forms characterization. *)
+(** |guṇa(v)| = 2 ⟺ v ∈ {ṛ, ṝ, ḷ, ḹ} — compound forms characterization. *)
 Lemma guna_compound_iff : forall v,
-  length (guna v) = 2 <-> (v = V_r \/ v = V_rr \/ v = V_l).
+  length (guna v) = 2 <-> (v = V_r \/ v = V_rr \/ v = V_l \/ v = V_ll).
 Proof.
   intro v; split.
   - intro H; destruct v; simpl in H; try discriminate; auto.
-  - intros [H | [H | H]]; subst; reflexivity.
+  - intros [H | [H | [H | H]]]; subst; reflexivity.
 Qed.
 
 (** vṛddhi_spec ⊆ V × P⁺ — exhaustive declarative vṛddhi specification. *)
@@ -845,6 +855,7 @@ Inductive vrddhi_result_spec : Vowel -> list Phoneme -> Prop :=
   | VR_r : vrddhi_result_spec V_r [Svar V_aa; Vyan C_r]
   | VR_rr : vrddhi_result_spec V_rr [Svar V_aa; Vyan C_r]
   | VR_l : vrddhi_result_spec V_l [Svar V_aa; Vyan C_l]
+  | VR_ll : vrddhi_result_spec V_ll [Svar V_aa; Vyan C_l]
   | VR_e : vrddhi_result_spec V_e [Svar V_ai]
   | VR_o : vrddhi_result_spec V_o [Svar V_au]
   | VR_ai : vrddhi_result_spec V_ai [Svar V_ai]
@@ -868,10 +879,13 @@ Proof.
   intros v [H | H]; subst; reflexivity.
 Qed.
 
-(** guṇa(ḷ) = [a, l]. *)
-Lemma guna_l_yields_al :
-  guna V_l = [Svar V_a; Vyan C_l].
-Proof. reflexivity. Qed.
+(** guṇa(ḷ) = guṇa(ḹ) = [a, l]. *)
+Lemma guna_l_yields_al : forall v,
+  (v = V_l \/ v = V_ll) ->
+  guna v = [Svar V_a; Vyan C_l].
+Proof.
+  intros v [H | H]; subst; reflexivity.
+Qed.
 
 (** v ∈ {ṛ, ṝ} ⟹ vṛddhi(v) = [ā, r]. *)
 Lemma vrddhi_r_yields_aar : forall v,
@@ -888,13 +902,13 @@ Proof. reflexivity. Qed.
 
 (** * Part VI: Yaṇ Correspondence *)
 
-(** yaṇ : V → C? — semivowel of ik vowels: i,ī↦y; u,ū↦v; ṛ,ṝ↦r; ḷ↦l. *)
+(** yaṇ : V → C? — semivowel of ik vowels: i,ī↦y; u,ū↦v; ṛ,ṝ↦r; ḷ,ḹ↦l. *)
 Definition yan_of (v : Vowel) : option Consonant :=
   match v with
   | V_i | V_ii => Some C_y
   | V_u | V_uu => Some C_v
   | V_r | V_rr => Some C_r
-  | V_l => Some C_l
+  | V_l | V_ll => Some C_l
   | _ => None
   end.
 
@@ -911,6 +925,7 @@ Proof.
   - exists C_r. reflexivity.
   - exists C_r. reflexivity.
   - exists C_l. reflexivity.
+  - exists C_l. reflexivity.
 Qed.
 
 (** yaṇ_spec ⊆ V × C — declarative yaṇ correspondence. *)
@@ -921,7 +936,8 @@ Inductive yan_of_spec : Vowel -> Consonant -> Prop :=
   | YanOf_uu : yan_of_spec V_uu C_v
   | YanOf_r : yan_of_spec V_r C_r
   | YanOf_rr : yan_of_spec V_rr C_r
-  | YanOf_l : yan_of_spec V_l C_l.
+  | YanOf_l : yan_of_spec V_l C_l
+  | YanOf_ll : yan_of_spec V_ll C_l.
 
 (** yaṇ(v) = c ⟺ yan_of_spec(v, c). *)
 Lemma yan_of_correct : forall v c,
@@ -2083,6 +2099,7 @@ Proof.
   - right. left. reflexivity.
   - right. left. reflexivity.
   - right. left. reflexivity.
+  - right. left. reflexivity.
   - right. right. reflexivity.
   - right. right. reflexivity.
   - right. right. reflexivity.
@@ -3052,6 +3069,7 @@ Proof.
         -- apply VSS_jhas_aa.
            ++ exact Ekhar.
            ++ apply is_jhas_correct. exact Ejhas.
+        -- apply VSS_jhas_other; [exact Ekhar | apply is_jhas_correct; exact Ejhas | discriminate | discriminate].
         -- apply VSS_jhas_other; [exact Ekhar | apply is_jhas_correct; exact Ejhas | discriminate | discriminate].
         -- apply VSS_jhas_other; [exact Ekhar | apply is_jhas_correct; exact Ejhas | discriminate | discriminate].
         -- apply VSS_jhas_other; [exact Ekhar | apply is_jhas_correct; exact Ejhas | discriminate | discriminate].
@@ -5264,7 +5282,7 @@ Proof. reflexivity. Qed.
 
 (** ** Vowel Classification Structure *)
 
-(** Instead of enumerating all 13 vowels, we classify them structurally.
+(** Instead of enumerating all 14 vowels, we classify them structurally.
     This classification captures the essential property for sandhi rule selection. *)
 
 Inductive VowelClass : Type :=
@@ -5275,7 +5293,7 @@ Inductive VowelClass : Type :=
 Definition classify_vowel (v : Vowel) : VowelClass :=
   match v with
   | V_a | V_aa => VC_A
-  | V_i | V_ii | V_u | V_uu | V_r | V_rr | V_l => VC_IK
+  | V_i | V_ii | V_u | V_uu | V_r | V_rr | V_l | V_ll => VC_IK
   | V_e | V_ai | V_o | V_au => VC_EC
   end.
 
